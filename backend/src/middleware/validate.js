@@ -1,0 +1,38 @@
+import { z } from "zod";
+
+export const accidentDataSchema = z.object({
+  device_id: z.string().min(3).max(100),
+  acceleration: z.coerce.number().min(0).max(100),
+  latitude: z.coerce.number().min(-90).max(90),
+  longitude: z.coerce.number().min(-180).max(180),
+  severity: z.enum(["MINOR", "MEDIUM", "SEVERE"]),
+  timestamp: z.string().optional()
+});
+
+export const heartbeatSchema = z.object({
+  device_id: z.string().min(3).max(100),
+  timestamp: z.string().optional()
+});
+
+export const deviceLocationSchema = z.object({
+  device_id: z.string().min(3).max(100),
+  latitude: z.coerce.number().min(-90).max(90),
+  longitude: z.coerce.number().min(-180).max(180),
+  timestamp: z.string().optional()
+});
+
+export const emergencyAlertSchema = z.object({
+  accidentId: z.coerce.number().int().positive(),
+  action: z.enum(["trigger", "acknowledge"]).optional(),
+  acknowledgedBy: z.string().min(2).max(120).optional(),
+  comment: z.string().min(2).max(250).optional()
+});
+
+export const validateBody = (schema) => (req, _res, next) => {
+  try {
+    req.body = schema.parse(req.body);
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
