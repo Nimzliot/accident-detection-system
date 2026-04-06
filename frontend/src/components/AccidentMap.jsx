@@ -67,6 +67,8 @@ const AccidentMap = ({ accidents, devices = [] }) => (
                 <p><strong>{accident.device_id}</strong></p>
                 <p>Severity: {accident.severity_label}</p>
                 <p>Acceleration: {accident.acceleration} m/s^2</p>
+                <p>Tilt: {Number(accident.tilt_angle ?? 0).toFixed(1)} deg</p>
+                <p>Speed: {Number(accident.speed ?? 0).toFixed(1)} km/h</p>
                 <p>Coordinates: {accident.latitude.toFixed(4)}, {accident.longitude.toFixed(4)}</p>
                 <p>Time: {new Date(accident.timestamp ?? accident.created_at).toLocaleString()}</p>
               </div>

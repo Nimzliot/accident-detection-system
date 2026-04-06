@@ -5,6 +5,8 @@ export const accidentDataSchema = z.object({
   acceleration: z.coerce.number().min(0).max(100),
   latitude: z.coerce.number().min(-90).max(90),
   longitude: z.coerce.number().min(-180).max(180),
+  tilt_angle: z.coerce.number().min(0).max(180).optional(),
+  speed: z.coerce.number().min(0).max(300).optional(),
   severity: z.enum(["MINOR", "MEDIUM", "SEVERE"]),
   timestamp: z.string().optional()
 });

@@ -13,6 +13,8 @@ const AccidentTable = ({ accidents }) => (
           <tr>
             <th className="pb-3">Device</th>
             <th className="pb-3">Acceleration</th>
+            <th className="pb-3">Tilt</th>
+            <th className="pb-3">Speed</th>
             <th className="pb-3">Severity</th>
             <th className="pb-3">Location</th>
             <th className="pb-3">Status</th>
@@ -24,6 +26,8 @@ const AccidentTable = ({ accidents }) => (
             <tr key={accident.id} className="border-t border-white/5">
               <td className="py-4 pr-4 font-medium text-white">{accident.device_id}</td>
               <td className="py-4 pr-4">{accident.acceleration} m/s^2</td>
+              <td className="py-4 pr-4">{Number(accident.tilt_angle ?? 0).toFixed(1)} deg</td>
+              <td className="py-4 pr-4">{Number(accident.speed ?? 0).toFixed(1)} km/h</td>
               <td className="py-4 pr-4">
                 <SeverityBadge label={accident.severity_label} />
               </td>

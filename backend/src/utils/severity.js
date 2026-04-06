@@ -15,7 +15,7 @@ export const calculateSeverity = ({
   tiltAngle = 0,
   gyroscopeMagnitude = 0
 }) => {
-  const impactMs2 = Number(acceleration) * 9.8;
+  const impactMs2 = Number(acceleration);
   const tiltScore = Math.abs(Number(tiltAngle));
   const gyroScore = Math.abs(Number(gyroscopeMagnitude));
 
