@@ -18,11 +18,12 @@ const int SCL_PIN = 22;
 const int GPS_RX_PIN = 16;   // GPS TX -> ESP32 RX
 const int GPS_TX_PIN = 17;   // GPS RX -> ESP32 TX
 const int BUZZER_PIN = 25;
+const float GRAVITY_MS2 = 9.80665f;
 
 // Accident threshold
-const float MINOR_THRESHOLD = 8.0f;
-const float MEDIUM_THRESHOLD = 12.0f;
-const float SEVERE_THRESHOLD = 18.0f;
+const float MINOR_THRESHOLD = 12.0f;
+const float MEDIUM_THRESHOLD = 18.0f;
+const float SEVERE_THRESHOLD = 25.0f;
 const float MINOR_TILT = 12.0f;
 const float MEDIUM_TILT = 25.0f;
 const float SEVERE_TILT = 40.0f;
@@ -90,10 +91,11 @@ MotionReading readMotion() {
   float y = (ay / 16384.0f) * 9.80665f;
   float z = (az / 16384.0f) * 9.80665f;
   float magnitude = sqrt((x * x) + (y * y) + (z * z));
+  float impact = fabs(magnitude - GRAVITY_MS2);
   float tilt = atan2(sqrt((x * x) + (y * y)), z) * 180.0f / PI;
 
   MotionReading reading;
-  reading.acceleration = magnitude;
+  reading.acceleration = impact;
   reading.tiltAngle = tilt;
   return reading;
 }
@@ -210,10 +212,11 @@ void loop() {
   float tiltAngle = motion.tiltAngle;
   float speedKmph = gps.speed.isValid() ? gps.speed.kmph() : 0.0f;
   const char* severity = classifySeverity(acceleration, tiltAngle, speedKmph);
+  const bool gpsValid = gps.location.isValid();
 
   double latitude = 0.0;
   double longitude = 0.0;
-  if (gps.location.isValid()) {
+  if (gpsValid) {
     latitude = gps.location.lat();
     longitude = gps.location.lng();
   }
@@ -231,7 +234,7 @@ void loop() {
   Serial.print(" | Lon: ");
   Serial.println(longitude, 6);
 
-  if (gps.location.isValid() && millis() - lastLocationTime > LOCATION_DELAY_MS) {
+  if (gpsValid && millis() - lastLocationTime > LOCATION_DELAY_MS) {
     sendLocation(latitude, longitude);
     lastLocationTime = millis();
   }
@@ -247,7 +250,11 @@ void loop() {
     if (strcmp(severity, "SEVERE") == 0) {
       beepBuzzer();
     }
-    sendAccident(acceleration, tiltAngle, speedKmph, latitude, longitude, severity);
+    if (gpsValid) {
+      sendAccident(acceleration, tiltAngle, speedKmph, latitude, longitude, severity);
+    } else {
+      Serial.println("GPS not locked, skipping accident upload to avoid invalid coordinates");
+    }
     lastSentTime = millis();
   }
 

@@ -7,6 +7,7 @@ import {
   Shield
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useDashboard } from "../context/DashboardContext";
 
 const links = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard },
@@ -38,7 +39,10 @@ const NavItems = () => (
   </>
 );
 
-const Sidebar = () => (
+const Sidebar = () => {
+  const { hardwareStatus } = useDashboard();
+
+  return (
   <>
     <div className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/90 px-4 py-5 backdrop-blur lg:hidden">
       <div className="mb-4 flex items-center gap-3">
@@ -69,6 +73,10 @@ const Sidebar = () => (
           </NavLink>
         ))}
       </nav>
+      <div className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm ${hardwareStatus.tone}`}>
+        <span className={`h-2.5 w-2.5 rounded-full ${hardwareStatus.dot}`} />
+        {hardwareStatus.label}
+      </div>
     </div>
 
     <aside className="sticky top-0 hidden h-screen w-72 shrink-0 overflow-y-auto border-r border-white/10 bg-slate-950/80 px-6 py-8 lg:block">
@@ -80,6 +88,11 @@ const Sidebar = () => (
         <p className="mt-2 text-sm text-slate-400">
           IoT incident command dashboard for realtime response teams.
         </p>
+        <div className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm ${hardwareStatus.tone}`}>
+          <span className={`h-2.5 w-2.5 rounded-full ${hardwareStatus.dot}`} />
+          {hardwareStatus.label}
+        </div>
+        <p className="mt-2 text-xs text-slate-500">{hardwareStatus.helper}</p>
       </div>
 
       <nav className="space-y-2">
@@ -87,6 +100,7 @@ const Sidebar = () => (
       </nav>
     </aside>
   </>
-);
+  );
+};
 
 export default Sidebar;
