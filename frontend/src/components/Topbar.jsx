@@ -3,7 +3,7 @@ import { useDashboard } from "../context/DashboardContext";
 import { useAuth } from "../context/AuthContext";
 
 const Topbar = () => {
-  const { connected, alerts } = useDashboard();
+  const { connected, alerts, hardwareStatus } = useDashboard();
   const { user, signOut } = useAuth();
 
   return (
@@ -15,13 +15,17 @@ const Topbar = () => {
         </h2>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="hidden rounded-full bg-white/5 px-4 py-2 text-sm text-slate-200 ring-1 ring-white/10 md:block">
           {user?.email}
         </div>
         <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm text-slate-200 ring-1 ring-white/10">
           <Radio size={16} className={connected ? "text-emerald-400" : "text-rose-400"} />
           {connected ? "Live telemetry online" : "Socket disconnected"}
+        </div>
+        <div className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm ${hardwareStatus.tone}`}>
+          <span className={`h-2.5 w-2.5 rounded-full ${hardwareStatus.dot}`} />
+          {hardwareStatus.label}
         </div>
         <div className="inline-flex items-center gap-2 rounded-full bg-rose-500/10 px-4 py-2 text-sm text-rose-200 ring-1 ring-rose-500/20">
           <BellRing size={16} />

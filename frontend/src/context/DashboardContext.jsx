@@ -59,6 +59,8 @@ const normalizeDevice = (device) => ({
   locationUpdatedAt: device.location_updated_at ?? device.locationUpdatedAt ?? null
 });
 
+const isSimulatedDevice = (deviceId = "") => deviceId.toUpperCase().startsWith("SIM-");
+
 export const DashboardProvider = ({ children }) => {
   const { session } = useAuth();
   const [clock, setClock] = useState(Date.now());
@@ -214,20 +216,64 @@ export const DashboardProvider = ({ children }) => {
   };
 
   const value = useMemo(
-    () => ({
-      summary,
-      devices: devices.map((device) => ({
+    () => {
+      const devicesWithPresence = devices.map((device) => ({
         ...device,
         presence: getDevicePresence(device.lastSeen)
-      })),
-      accidents,
-      alerts,
-      latestAccident,
-      connected,
-      loading,
-      acknowledgeAlert,
-      runSimulation
-    }),
+      }));
+
+      const hardwareDevices = devicesWithPresence.filter(
+        (device) => !isSimulatedDevice(device.deviceId)
+      );
+
+      let hardwareStatus = {
+        key: "not_detected",
+        label: "No hardware detected",
+        helper: "Connect an ESP32 device to begin live telemetry.",
+        tone: "bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/30",
+        dot: "bg-slate-400"
+      };
+
+      if (hardwareDevices.some((device) => device.presence.key === "online")) {
+        hardwareStatus = {
+          key: "connected",
+          label: "Hardware connected",
+          helper: "ESP32 heartbeat is active and live telemetry is available.",
+          tone: "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30",
+          dot: "bg-emerald-400"
+        };
+      } else if (hardwareDevices.some((device) => device.presence.key === "stale")) {
+        hardwareStatus = {
+          key: "delayed",
+          label: "Hardware delayed",
+          helper: "A real device was seen recently, but heartbeat is delayed.",
+          tone: "bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/30",
+          dot: "bg-amber-300"
+        };
+      } else if (hardwareDevices.length > 0) {
+        hardwareStatus = {
+          key: "offline",
+          label: "Hardware offline",
+          helper: "Known device found, but no recent heartbeat is being received.",
+          tone: "bg-rose-500/15 text-rose-200 ring-1 ring-rose-500/30",
+          dot: "bg-rose-400"
+        };
+      }
+
+      return {
+        summary,
+        devices: devicesWithPresence,
+        hardwareDevices,
+        hardwareStatus,
+        accidents,
+        alerts,
+        latestAccident,
+        connected,
+        loading,
+        acknowledgeAlert,
+        runSimulation
+      };
+    },
     [summary, devices, accidents, alerts, latestAccident, connected, loading, session, clock]
   );
 

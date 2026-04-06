@@ -30,9 +30,10 @@ const AlertList = () => {
               <button
                 type="button"
                 onClick={() => acknowledgeAlert(alert.accidentId ?? alert.accident_id)}
+                disabled={!alert.sent}
                 className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-cyan-200"
               >
-                Acknowledge
+                {alert.sent ? "Acknowledge" : "Acknowledged"}
               </button>
             </div>
           </div>

@@ -16,6 +16,9 @@ const SimulationPanel = () => {
       <p className="mt-3 text-sm text-slate-300">
         Generate realistic fake sensor events to test alerts, charts, and the 3D impact viewer.
       </p>
+      <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">
+        Demo controls stay available even when real hardware is connected.
+      </p>
       <div className="mt-5 grid gap-3 md:grid-cols-3">
         <button
           type="button"

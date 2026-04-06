@@ -2,10 +2,15 @@ import { TriangleAlert } from "lucide-react";
 import { useDashboard } from "../context/DashboardContext";
 
 const AlertBanner = () => {
-  const { latestAccident } = useDashboard();
+  const { latestAccident, alerts } = useDashboard();
   const latest = latestAccident;
 
-  if (!latest || latest.severity_level !== 3) {
+  const latestAlert = alerts.find(
+    (alert) =>
+      (alert.accidentId === latest?.id || alert.accident_id === latest?.id) && alert.sent
+  );
+
+  if (!latest || latest.severity_level !== 3 || !latestAlert) {
     return null;
   }
 
@@ -26,7 +31,7 @@ const AlertBanner = () => {
           </div>
         </div>
         <p className="text-sm text-rose-100/80">
-          Emergency contacts and ambulance response simulation have been triggered.
+          Emergency contacts and ambulance response simulation are active until this alert is acknowledged.
         </p>
       </div>
     </div>
