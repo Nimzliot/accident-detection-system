@@ -37,6 +37,10 @@ MPU6050 mpu;
 TinyGPSPlus gps;
 HardwareSerial gpsSerial(2);
 
+// Forward declaration helps Arduino IDE auto-generated prototypes
+// recognize the custom return type before function parsing.
+struct MotionReading;
+
 unsigned long lastSentTime = 0;
 unsigned long lastHeartbeatTime = 0;
 unsigned long lastLocationTime = 0;
