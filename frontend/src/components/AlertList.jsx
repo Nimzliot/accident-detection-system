@@ -1,4 +1,5 @@
 import { useDashboard } from "../context/DashboardContext";
+import { MapPinned, MessageSquareWarning } from "lucide-react";
 import SeverityBadge from "./SeverityBadge";
 
 const AlertList = () => {
@@ -13,19 +14,34 @@ const AlertList = () => {
 
       <div className="space-y-3">
         {alerts.map((alert) => (
-          <div key={alert.id} className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4">
+          <div key={alert.id} className="rounded-[24px] border border-rose-500/20 bg-[linear-gradient(135deg,rgba(127,29,29,0.16),rgba(15,23,42,0.72))] p-5">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <div className="flex items-center gap-3">
                   <p className="font-semibold text-white">{alert.accident?.device_id ?? "Emergency Alert"}</p>
                   <SeverityBadge label={alert.accident?.severity_label ?? "Severe"} />
                 </div>
-                <p className="mt-2 text-sm text-slate-300">
-                  {alert.message}
-                </p>
+                <p className="mt-2 text-sm text-slate-300">{alert.message}</p>
                 <p className="mt-1 text-xs uppercase tracking-[0.2em] text-rose-200/70">
                   Alert status: {alert.sent ? "sent" : "acknowledged"}
                 </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-2 text-xs text-slate-200 ring-1 ring-white/10">
+                    <MessageSquareWarning size={14} />
+                    SMS workflow active
+                  </div>
+                  {alert.accident?.latitude != null && alert.accident?.longitude != null ? (
+                    <a
+                      href={`https://maps.google.com/?q=${Number(alert.accident.latitude).toFixed(6)},${Number(alert.accident.longitude).toFixed(6)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full bg-cyan-300 px-3 py-2 text-xs font-semibold text-slate-950 transition hover:bg-cyan-200"
+                    >
+                      <MapPinned size={14} />
+                      View Map Link
+                    </a>
+                  ) : null}
+                </div>
               </div>
               <button
                 type="button"

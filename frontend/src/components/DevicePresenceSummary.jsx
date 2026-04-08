@@ -1,7 +1,7 @@
 const PresenceCard = ({ label, value, accent, helper }) => (
-  <div className="rounded-[24px] border border-white/10 bg-panel/80 p-5 shadow-glow">
+  <div className="rounded-[24px] border border-white/10 bg-[linear-gradient(135deg,rgba(25,20,30,0.94),rgba(24,26,45,0.9))] p-5 shadow-glow">
     <div className={`mb-4 h-2 w-14 rounded-full ${accent}`} />
-    <p className="text-sm uppercase tracking-[0.2em] text-slate-400">{label}</p>
+    <p className="text-sm uppercase tracking-[0.2em] text-orange-200/80">{label}</p>
     <div className="mt-3 flex items-end justify-between gap-4">
       <h3 className="font-display text-4xl font-semibold text-white">{value}</h3>
       <p className="max-w-[10rem] text-right text-xs text-slate-400">{helper}</p>

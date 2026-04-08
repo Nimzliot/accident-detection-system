@@ -1,9 +1,9 @@
 import { formatHeartbeatAge } from "../utils/deviceStatus";
 
 const DevicePanel = ({ devices }) => (
-  <div className="rounded-[28px] border border-white/10 bg-panel/80 p-5 shadow-glow">
+  <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(25,20,30,0.94),rgba(24,26,45,0.9))] p-5 shadow-glow">
     <div className="mb-4">
-      <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Fleet Devices</p>
+      <p className="text-sm uppercase tracking-[0.2em] text-orange-200/80">Fleet Devices</p>
       <h3 className="mt-2 font-display text-2xl text-white">Heartbeat status</h3>
       <p className="mt-2 text-sm text-slate-400">
         Online: under 20 sec, Stale: 20 to 60 sec, Offline: over 60 sec since last heartbeat.
@@ -11,7 +11,7 @@ const DevicePanel = ({ devices }) => (
     </div>
     <div className="space-y-3">
       {devices.map((device) => (
-        <div key={device.deviceId} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div key={device.deviceId} className="rounded-2xl border border-white/10 bg-black/10 p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="flex items-center gap-3">

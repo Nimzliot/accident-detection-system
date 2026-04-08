@@ -10,6 +10,11 @@
 body {
   margin: 0;
   min-width: 320px;
+  background:
+    radial-gradient(circle at top, rgba(251, 146, 60, 0.16), transparent 28%),
+    radial-gradient(circle at right, rgba(239, 68, 68, 0.14), transparent 26%),
+    linear-gradient(180deg, #120c0d 0%, #160f16 42%, #0d0910 100%);
+  color: #e2e8f0;
 }
 
 * {
@@ -19,10 +24,10 @@ body {
 .leaflet-container {
   height: 100%;
   width: 100%;
-  background: #0f172a;
+  background: #1d1720;
 }
 
 .leaflet-control-attribution {
-  background: rgba(8, 17, 31, 0.8) !important;
+  background: rgba(29, 23, 32, 0.9) !important;
   color: #cbd5e1 !important;
 }

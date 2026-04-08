@@ -10,8 +10,8 @@ const SimulationPanel = () => {
   const { runSimulation } = useDashboard();
 
   return (
-    <div className="rounded-[28px] border border-white/10 bg-panel/80 p-5 shadow-glow">
-      <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Demo Mode</p>
+    <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(25,20,30,0.94),rgba(20,27,49,0.9))] p-5 shadow-glow">
+      <p className="text-sm uppercase tracking-[0.2em] text-orange-200/80">Demo Mode</p>
       <h3 className="mt-2 font-display text-2xl text-white">Accident simulator</h3>
       <p className="mt-3 text-sm text-slate-300">
         Generate realistic fake sensor events to test alerts, charts, and the 3D impact viewer.

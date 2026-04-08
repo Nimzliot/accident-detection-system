@@ -9,6 +9,9 @@ const client = hasTwilioConfig
   ? twilio(env.twilioAccountSid, env.twilioAuthToken)
   : null;
 
+const buildGoogleMapsLink = (latitude, longitude) =>
+  `https://maps.google.com/?q=${Number(latitude).toFixed(6)},${Number(longitude).toFixed(6)}`;
+
 const sendSms = async (to, body) => {
   if (!client) {
     return {
@@ -34,11 +37,12 @@ const sendSms = async (to, body) => {
 };
 
 export const triggerEmergencyAlerts = async (accident) => {
+  const mapLink = buildGoogleMapsLink(accident.latitude, accident.longitude);
   const message =
     `Severe accident detected for ${accident.device_id}. ` +
     `Acceleration ${Number(accident.acceleration).toFixed(2)} m/s^2. ` +
     `Location ${Number(accident.latitude).toFixed(4)}, ${Number(accident.longitude).toFixed(4)}. ` +
-    `Immediate response required. Dispatch emergency support.`;
+    `Map ${mapLink}. Immediate response required. Dispatch emergency support.`;
 
   const recipients = [...env.emergencyContacts, env.ambulanceContact].filter(Boolean);
   const deliveries = [];
@@ -58,6 +62,7 @@ export const triggerEmergencyAlerts = async (accident) => {
     recipients,
     deliveries,
     message,
+    mapLink,
     triggeredAt: new Date().toISOString()
   };
 };

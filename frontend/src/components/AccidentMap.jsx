@@ -12,13 +12,13 @@ const liveDevices = (devices) =>
   devices.filter((device) => Number.isFinite(device.latitude) && Number.isFinite(device.longitude));
 
 const AccidentMap = ({ accidents, devices = [] }) => (
-  <div className="rounded-[28px] border border-white/10 bg-panel/80 p-5 shadow-glow">
+  <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(25,20,30,0.94),rgba(24,26,45,0.9))] p-5 shadow-glow">
     <div className="mb-4 flex items-center justify-between">
       <div>
-        <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Incident Map</p>
+        <p className="text-sm uppercase tracking-[0.2em] text-orange-200/80">Incident Map</p>
         <h3 className="mt-2 font-display text-2xl text-white">OpenStreetMap live tracking</h3>
       </div>
-      <div className="rounded-full bg-white/5 px-4 py-2 text-sm text-slate-300">
+      <div className="rounded-full bg-white/5 px-4 py-2 text-sm text-slate-300 ring-1 ring-white/10">
         {liveDevices(devices).length} live vehicle marker(s)
       </div>
     </div>

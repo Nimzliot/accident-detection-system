@@ -7,8 +7,8 @@ const DeviceStatusPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[28px] border border-white/10 bg-panel/80 p-6 shadow-glow">
-        <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Device Status</p>
+      <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(29,18,20,0.95),rgba(50,26,19,0.88))] p-6 shadow-glow">
+        <p className="text-sm uppercase tracking-[0.2em] text-orange-200/80">Device Status</p>
         <h2 className="mt-2 font-display text-3xl text-white">Fleet connectivity</h2>
         <p className="mt-3 text-slate-300">
           Backend websocket status: {connected ? "connected and streaming telemetry" : "offline"}

@@ -11,12 +11,15 @@ const char* WIFI_SSID = "YOUR_WIFI_NAME";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 const char* BACKEND_BASE_URL = "http://192.168.1.100:5000/api";
 const char* DEVICE_ID = "vehicle_01";
+const char* EMERGENCY_PHONE = "+911234567890";
 
 // Pin connections
 const int SDA_PIN = 21;
 const int SCL_PIN = 22;
 const int GPS_RX_PIN = 16;   // GPS TX -> ESP32 RX
 const int GPS_TX_PIN = 17;   // GPS RX -> ESP32 TX
+const int GSM_RX_PIN = 26;   // SIM800L TX -> ESP32 RX
+const int GSM_TX_PIN = 27;   // SIM800L RX -> ESP32 TX
 const int BUZZER_PIN = 25;
 const float GRAVITY_MS2 = 9.80665f;
 
@@ -32,10 +35,12 @@ const float SEVERE_SPEED = 60.0f;
 const unsigned long SEND_DELAY_MS = 5000;
 const unsigned long HEARTBEAT_DELAY_MS = 15000;
 const unsigned long LOCATION_DELAY_MS = 5000;
+const unsigned long GPS_STALE_MS = 15000;
 
 MPU6050 mpu;
 TinyGPSPlus gps;
 HardwareSerial gpsSerial(2);
+HardwareSerial gsmSerial(1);
 
 // Forward declaration helps Arduino IDE auto-generated prototypes
 // recognize the custom return type before function parsing.
@@ -54,10 +59,34 @@ String buildApiUrl(const char* path) {
   return url;
 }
 
+String buildGoogleMapsLink(double latitude, double longitude) {
+  String url = "https://maps.google.com/?q=";
+  url += String(latitude, 6);
+  url += ",";
+  url += String(longitude, 6);
+  return url;
+}
+
 struct MotionReading {
   float acceleration;
   float tiltAngle;
 };
+
+bool hasFreshGpsFix() {
+  return gps.location.isValid() &&
+    gps.location.age() < GPS_STALE_MS &&
+    (!gps.satellites.isValid() || gps.satellites.value() >= 3);
+}
+
+void feedGpsFor(unsigned long durationMs) {
+  const unsigned long start = millis();
+  while (millis() - start < durationMs) {
+    while (gpsSerial.available()) {
+      gps.encode(gpsSerial.read());
+    }
+    delay(2);
+  }
+}
 
 void connectWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -90,6 +119,14 @@ void setupMPU6050() {
 void setupGPS() {
   gpsSerial.begin(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
   Serial.println("GPS started");
+}
+
+void setupGSM() {
+  gsmSerial.begin(9600, SERIAL_8N1, GSM_RX_PIN, GSM_TX_PIN);
+  feedGpsFor(1000);
+  gsmSerial.println("AT");
+  feedGpsFor(500);
+  Serial.println("SIM800L started");
 }
 
 void readGPS() {
@@ -135,8 +172,60 @@ const char* classifySeverity(float acceleration, float tiltAngle, float speedKmp
 
 void beepBuzzer() {
   digitalWrite(BUZZER_PIN, HIGH);
-  delay(3000);
+  feedGpsFor(3000);
   digitalWrite(BUZZER_PIN, LOW);
+}
+
+void flushGsmSerial() {
+  while (gsmSerial.available()) {
+    Serial.write(gsmSerial.read());
+  }
+}
+
+void sendSevereSmsAlert(float acceleration, float tiltAngle, float speedKmph, double latitude, double longitude) {
+  String sms = "Severe accident detected for ";
+  sms += DEVICE_ID;
+  sms += ". Acc=";
+  sms += String(acceleration, 2);
+  sms += " m/s^2, Tilt=";
+  sms += String(tiltAngle, 1);
+  sms += " deg, Speed=";
+  sms += String(speedKmph, 1);
+  sms += " km/h";
+
+  if (hasFreshGpsFix()) {
+    sms += ", Lat=";
+    sms += String(latitude, 6);
+    sms += ", Lon=";
+    sms += String(longitude, 6);
+    sms += ", Map: ";
+    sms += buildGoogleMapsLink(latitude, longitude);
+  } else {
+    sms += ", GPS pending";
+  }
+
+  gsmSerial.println("AT");
+  feedGpsFor(500);
+  flushGsmSerial();
+
+  gsmSerial.println("AT+CMGF=1");
+  feedGpsFor(500);
+  flushGsmSerial();
+
+  gsmSerial.print("AT+CMGS=\"");
+  gsmSerial.print(EMERGENCY_PHONE);
+  gsmSerial.println("\"");
+  feedGpsFor(500);
+  flushGsmSerial();
+
+  gsmSerial.print(sms);
+  feedGpsFor(500);
+  gsmSerial.write(26);
+  feedGpsFor(5000);
+
+  Serial.print("SIM800L SMS -> ");
+  Serial.println(EMERGENCY_PHONE);
+  flushGsmSerial();
 }
 
 void sendAccident(float acceleration, float tiltAngle, float speedKmph, double latitude, double longitude, const char* severity) {
@@ -155,7 +244,7 @@ void sendAccident(float acceleration, float tiltAngle, float speedKmph, double l
   payload += "\"acceleration\":" + String(acceleration, 2) + ",";
   payload += "\"tilt_angle\":" + String(tiltAngle, 2) + ",";
   payload += "\"speed\":" + String(speedKmph, 2) + ",";
-  if (gps.location.isValid()) {
+  if (hasFreshGpsFix()) {
     payload += "\"latitude\":" + String(latitude, 6) + ",";
     payload += "\"longitude\":" + String(longitude, 6) + ",";
   }
@@ -236,6 +325,7 @@ void setup() {
   connectWiFi();
   setupMPU6050();
   setupGPS();
+  setupGSM();
   sendHeartbeat();
   lastHeartbeatTime = millis();
 }
@@ -252,7 +342,7 @@ void loop() {
   float tiltAngle = motion.tiltAngle;
   float speedKmph = gps.speed.isValid() ? gps.speed.kmph() : 0.0f;
   const char* severity = classifySeverity(acceleration, tiltAngle, speedKmph);
-  const bool gpsValid = gps.location.isValid();
+  const bool gpsValid = hasFreshGpsFix();
 
   double latitude = 0.0;
   double longitude = 0.0;
@@ -269,6 +359,8 @@ void loop() {
   Serial.print(speedKmph);
   Serial.print(" km/h | Severity: ");
   Serial.print(severity);
+  Serial.print(" | Sats: ");
+  Serial.print(gps.satellites.isValid() ? gps.satellites.value() : 0);
   Serial.print(" | Lat: ");
   Serial.print(latitude, 6);
   Serial.print(" | Lon: ");
@@ -289,6 +381,7 @@ void loop() {
     Serial.println(" accident detected");
     if (strcmp(severity, "SEVERE") == 0) {
       beepBuzzer();
+      sendSevereSmsAlert(acceleration, tiltAngle, speedKmph, latitude, longitude);
     }
     if (!gpsValid) {
       Serial.println("GPS not locked, uploading accident without coordinates so backend can simulate location");
@@ -297,5 +390,5 @@ void loop() {
     lastSentTime = millis();
   }
 
-  delay(500);
+  feedGpsFor(500);
 }

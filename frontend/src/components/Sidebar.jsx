@@ -2,9 +2,10 @@ import {
   Activity,
   Bell,
   ClipboardList,
+  Flame,
   LayoutDashboard,
   RadioTower,
-  Shield
+  TriangleAlert
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useDashboard } from "../context/DashboardContext";
@@ -24,10 +25,10 @@ const NavItems = () => (
         key={to}
         to={to}
         end={to === "/app"}
-        className={({ isActive }) =>
-          `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition ${
-            isActive
-              ? "bg-cyan-400/10 text-cyan-200 ring-1 ring-cyan-300/20"
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition ${
+                isActive
+              ? "bg-orange-400/10 text-orange-100 ring-1 ring-orange-300/20"
               : "text-slate-300 hover:bg-white/5 hover:text-white"
           }`
         }
@@ -44,14 +45,15 @@ const Sidebar = () => {
 
   return (
   <>
-    <div className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/90 px-4 py-5 backdrop-blur lg:hidden">
+    <div className="sticky top-0 z-40 border-b border-white/10 bg-[#120c0d]/90 px-4 py-5 backdrop-blur lg:hidden">
       <div className="mb-4 flex items-center gap-3">
-        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/10 text-cyan-300">
-          <Shield size={24} />
+        <div className="relative inline-flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(135deg,rgba(249,115,22,0.24),rgba(239,68,68,0.18))] text-orange-200 ring-1 ring-orange-300/20">
+          <Flame size={20} />
+          <TriangleAlert size={12} className="absolute bottom-2 right-2 text-white/90" />
         </div>
         <div>
-          <h1 className="font-display text-2xl font-semibold text-white">Smart Accident</h1>
-          <p className="text-sm text-slate-400">Realtime response dashboard</p>
+          <h1 className="font-display text-2xl font-semibold text-white">Crash Command</h1>
+          <p className="text-sm text-slate-400">Emergency response dashboard</p>
         </div>
       </div>
       <nav className="flex gap-2 overflow-x-auto pb-1">
@@ -63,7 +65,7 @@ const Sidebar = () => {
             className={({ isActive }) =>
               `inline-flex shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-sm transition ${
                 isActive
-                  ? "bg-cyan-400/10 text-cyan-200 ring-1 ring-cyan-300/20"
+                  ? "bg-orange-400/10 text-orange-100 ring-1 ring-orange-300/20"
                   : "bg-white/5 text-slate-300"
               }`
             }
@@ -79,14 +81,20 @@ const Sidebar = () => {
       </div>
     </div>
 
-    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 overflow-y-auto border-r border-white/10 bg-slate-950/80 px-6 py-8 lg:block">
+    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 overflow-y-auto border-r border-white/10 bg-[linear-gradient(180deg,rgba(18,12,13,0.98),rgba(16,11,18,0.92))] px-6 py-8 lg:block">
       <div className="mb-10">
-        <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/10 text-cyan-300">
-          <Shield size={24} />
+        <div className="mb-4 flex items-center gap-3">
+          <div className="relative inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-[20px] bg-[linear-gradient(135deg,rgba(249,115,22,0.24),rgba(239,68,68,0.18))] text-orange-200 ring-1 ring-orange-300/20 shadow-glow">
+            <Flame size={24} />
+            <TriangleAlert size={14} className="absolute bottom-2 right-2 text-white/90" />
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.28em] text-orange-300/80">Rapid Response</p>
+            <h1 className="font-display text-2xl font-semibold text-white">Crash Command</h1>
+          </div>
         </div>
-        <h1 className="font-display text-2xl font-semibold text-white">Smart Accident</h1>
         <p className="mt-2 text-sm text-slate-400">
-          IoT incident command dashboard for realtime response teams.
+          Emergency-grade command dashboard for live crash telemetry, GPS, and GSM escalation.
         </p>
         <div className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm ${hardwareStatus.tone}`}>
           <span className={`h-2.5 w-2.5 rounded-full ${hardwareStatus.dot}`} />

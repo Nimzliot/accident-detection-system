@@ -7,17 +7,17 @@ export default {
         minor: "#22c55e",
         medium: "#facc15",
         severe: "#ef4444",
-        base: "#08111f",
-        panel: "#0f1c2f",
-        line: "#233756",
-        accent: "#4fd1c5"
+        base: "#120c0d",
+        panel: "#1d1720",
+        line: "#3e2a37",
+        accent: "#f97316"
       },
       fontFamily: {
         display: ["Poppins", "sans-serif"],
         body: ["Manrope", "sans-serif"]
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(79, 209, 197, 0.12), 0 24px 80px rgba(8, 17, 31, 0.45)"
+        glow: "0 0 0 1px rgba(249, 115, 22, 0.14), 0 24px 80px rgba(14, 9, 11, 0.48)"
       },
       keyframes: {
         pulseAlert: {

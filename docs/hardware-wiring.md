@@ -5,6 +5,7 @@
 - ESP32 Development Board (ESP-WROOM-32)
 - MPU6050 Accelerometer + Gyroscope
 - NEO-6M GPS Module
+- SIM800L GSM Module
 - Active Buzzer
 - Breadboard
 - Jumper Wires
@@ -27,6 +28,13 @@
 | TX | GPIO 16 |
 | RX | GPIO 17 |
 
+| SIM800L Pin | ESP32 Pin |
+| --- | --- |
+| TXD | GPIO 26 |
+| RXD | GPIO 27 |
+| GND | GND |
+| VCC | External regulated supply |
+
 | Active Buzzer Pin | ESP32 Pin |
 | --- | --- |
 | VCC / Signal | GPIO 25 |
@@ -38,6 +46,7 @@
 flowchart LR
   MPU[MPU6050]
   GPS[NEO-6M GPS]
+  GSM[SIM800L]
   Buzzer[Active Buzzer]
   ESP[ESP32 Dev Board]
 
@@ -49,6 +58,8 @@ flowchart LR
   GPS -- GND --> ESPGND
   GPS -- TX --> ESPRX[GPIO 16]
   GPS -- RX --> ESPTX[GPIO 17]
+  GSM -- TX --> ESPGSMRX[GPIO 26]
+  GSM -- RX --> ESPGSMTX[GPIO 27]
   Buzzer -- Signal --> ESPBUZ[GPIO 25]
   Buzzer -- GND --> ESPGND
 ```
@@ -58,6 +69,8 @@ flowchart LR
 - Power the MPU6050 from the ESP32 `3.3V` pin to avoid over-voltage issues.
 - Connect `SDA` and `SCL` on the shared I2C bus.
 - Use ESP32 `UART2` on `GPIO16` and `GPIO17` for the NEO-6M GPS module.
+- Use another ESP32 hardware UART on `GPIO26` and `GPIO27` for the SIM800L module.
+- Do not power the SIM800L directly from the ESP32 `3.3V` pin; use a stable external supply suitable for GSM current spikes.
 - The active buzzer is driven directly from `GPIO25` and sounds for severe accidents.
 - Use a stable USB power source while testing to avoid noisy sensor readings.
 - Mount the MPU6050 firmly on the vehicle body or prototype chassis so tilt and impact readings are meaningful.

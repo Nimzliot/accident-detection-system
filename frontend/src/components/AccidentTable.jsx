@@ -1,9 +1,9 @@
 import SeverityBadge from "./SeverityBadge";
 
 const AccidentTable = ({ accidents }) => (
-  <div className="rounded-[28px] border border-white/10 bg-panel/80 p-5 shadow-glow">
+  <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(25,20,30,0.94),rgba(24,26,45,0.9))] p-5 shadow-glow">
     <div className="mb-4">
-      <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Accident History</p>
+      <p className="text-sm uppercase tracking-[0.2em] text-orange-200/80">Accident History</p>
       <h3 className="mt-2 font-display text-2xl text-white">Latest incident log</h3>
     </div>
 

@@ -29,8 +29,8 @@ const ChartsPanel = ({ accidents, summary }) => {
 
   return (
     <div className="grid gap-6 xl:grid-cols-2">
-      <div className="rounded-[28px] border border-white/10 bg-panel/80 p-5 shadow-glow">
-        <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Timeline</p>
+      <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(25,20,30,0.94),rgba(24,26,45,0.9))] p-5 shadow-glow">
+        <p className="text-sm uppercase tracking-[0.2em] text-orange-200/80">Timeline</p>
         <h3 className="mt-2 font-display text-2xl text-white">Impact trend</h3>
         <div className="mt-6 h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -42,17 +42,17 @@ const ChartsPanel = ({ accidents, summary }) => {
               <Line
                 dataKey="acceleration"
                 type="monotone"
-                stroke="#22d3ee"
+                stroke="#fb923c"
                 strokeWidth={3}
-                dot={{ fill: "#22d3ee", r: 4 }}
+                dot={{ fill: "#fb923c", r: 4 }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-white/10 bg-panel/80 p-5 shadow-glow">
-        <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Severity Mix</p>
+      <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(25,20,30,0.94),rgba(24,26,45,0.9))] p-5 shadow-glow">
+        <p className="text-sm uppercase tracking-[0.2em] text-orange-200/80">Severity Mix</p>
         <h3 className="mt-2 font-display text-2xl text-white">Incident classification</h3>
         <div className="mt-6 h-64">
           <ResponsiveContainer width="100%" height="100%">

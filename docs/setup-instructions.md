@@ -47,8 +47,10 @@ Then set:
    - `MPU6050 SCL -> GPIO22`
    - `GPS TX -> GPIO16`
    - `GPS RX -> GPIO17`
+   - `SIM800L TX -> GPIO26`
+   - `SIM800L RX -> GPIO27`
    - `Buzzer -> GPIO25`
-4. Update `WIFI_SSID`, `WIFI_PASSWORD`, `BACKEND_BASE_URL`, and `DEVICE_ID` at the top of `embedded/esp32_mpu6050_accident_detector.ino`.
+4. Update `WIFI_SSID`, `WIFI_PASSWORD`, `BACKEND_BASE_URL`, `DEVICE_ID`, and `EMERGENCY_PHONE` at the top of `embedded/esp32_mpu6050_accident_detector.ino`.
    Set `BACKEND_BASE_URL` to your laptop LAN address, for example `http://192.168.1.100:5000/api`.
    Do not use `localhost` in the ESP32 sketch because `localhost` points to the ESP32 itself, not your laptop.
 5. Select `ESP32 Dev Module` in Arduino IDE and upload.
