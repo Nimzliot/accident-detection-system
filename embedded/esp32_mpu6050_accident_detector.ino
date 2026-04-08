@@ -5,11 +5,11 @@
 #include <TinyGPS++.h>
 
 // WiFi and backend settings
+// Replace these placeholders with the same WiFi name/password used by the laptop
+// running the backend. Use the laptop LAN IP, not localhost.
 const char* WIFI_SSID = "YOUR_WIFI_NAME";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
-const char* SERVER_URL = "http://SERVER_IP:5000/api/accident-data";
-const char* HEARTBEAT_URL = "http://SERVER_IP:5000/api/device-heartbeat";
-const char* LOCATION_URL = "http://SERVER_IP:5000/api/device-location";
+const char* BACKEND_BASE_URL = "http://192.168.1.100:5000/api";
 const char* DEVICE_ID = "vehicle_01";
 
 // Pin connections
@@ -41,6 +41,15 @@ unsigned long lastSentTime = 0;
 unsigned long lastHeartbeatTime = 0;
 unsigned long lastLocationTime = 0;
 
+String buildApiUrl(const char* path) {
+  String url = String(BACKEND_BASE_URL);
+  if (!url.endsWith("/")) {
+    url += "/";
+  }
+  url += path;
+  return url;
+}
+
 struct MotionReading {
   float acceleration;
   float tiltAngle;
@@ -48,7 +57,8 @@ struct MotionReading {
 
 void connectWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to WiFi");
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(WIFI_SSID);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -56,7 +66,10 @@ void connectWiFi() {
   }
 
   Serial.println("\nWiFi connected");
+  Serial.print("ESP32 IP: ");
   Serial.println(WiFi.localIP());
+  Serial.print("Backend base URL: ");
+  Serial.println(BACKEND_BASE_URL);
 }
 
 void setupMPU6050() {
@@ -129,7 +142,8 @@ void sendAccident(float acceleration, float tiltAngle, float speedKmph, double l
   }
 
   HTTPClient http;
-  http.begin(SERVER_URL);
+  String accidentUrl = buildApiUrl("accident-data");
+  http.begin(accidentUrl);
   http.addHeader("Content-Type", "application/json");
 
   String payload = "{";
@@ -143,8 +157,14 @@ void sendAccident(float acceleration, float tiltAngle, float speedKmph, double l
   payload += "}";
 
   int httpCode = http.POST(payload);
-  Serial.print("HTTP Response: ");
+  String responseBody = http.getString();
+  Serial.print("Accident POST -> ");
+  Serial.println(accidentUrl);
+  Serial.print("Accident HTTP Response: ");
   Serial.println(httpCode);
+  if (responseBody.length() > 0) {
+    Serial.println(responseBody);
+  }
   http.end();
 }
 
@@ -154,7 +174,8 @@ void sendLocation(double latitude, double longitude) {
   }
 
   HTTPClient http;
-  http.begin(LOCATION_URL);
+  String locationUrl = buildApiUrl("device-location");
+  http.begin(locationUrl);
   http.addHeader("Content-Type", "application/json");
 
   String payload = "{";
@@ -164,8 +185,14 @@ void sendLocation(double latitude, double longitude) {
   payload += "}";
 
   int httpCode = http.POST(payload);
+  String responseBody = http.getString();
+  Serial.print("Location POST -> ");
+  Serial.println(locationUrl);
   Serial.print("Location HTTP Response: ");
   Serial.println(httpCode);
+  if (responseBody.length() > 0) {
+    Serial.println(responseBody);
+  }
   http.end();
 }
 
@@ -175,7 +202,8 @@ void sendHeartbeat() {
   }
 
   HTTPClient http;
-  http.begin(HEARTBEAT_URL);
+  String heartbeatUrl = buildApiUrl("device-heartbeat");
+  http.begin(heartbeatUrl);
   http.addHeader("Content-Type", "application/json");
 
   String payload = "{";
@@ -183,8 +211,14 @@ void sendHeartbeat() {
   payload += "}";
 
   int httpCode = http.POST(payload);
+  String responseBody = http.getString();
+  Serial.print("Heartbeat POST -> ");
+  Serial.println(heartbeatUrl);
   Serial.print("Heartbeat HTTP Response: ");
   Serial.println(httpCode);
+  if (responseBody.length() > 0) {
+    Serial.println(responseBody);
+  }
   http.end();
 }
 

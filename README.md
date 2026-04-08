@@ -35,8 +35,7 @@ Update these values in `embedded/esp32_mpu6050_accident_detector.ino` before upl
 
 - `WIFI_SSID`
 - `WIFI_PASSWORD`
-- `SERVER_URL`
-- `LOCATION_URL`
+- `BACKEND_BASE_URL`
 - `DEVICE_ID`
 
 Use your laptop's local IP address for the backend URLs, not `localhost`.

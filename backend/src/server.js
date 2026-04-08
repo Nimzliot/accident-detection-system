@@ -23,6 +23,6 @@ io.on("connection", (socket) => {
 
 setSocketServer(io);
 
-server.listen(env.port, () => {
-  console.log(`Smart Accident backend listening on port ${env.port}`);
+server.listen(env.port, env.host, () => {
+  console.log(`Smart Accident backend listening on http://${env.host}:${env.port}`);
 });
