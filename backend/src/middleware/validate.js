@@ -1,10 +1,16 @@
 import { z } from "zod";
 
+const optionalCoordinate = (min, max) =>
+  z.preprocess(
+    (value) => (value === undefined || value === null || value === "" ? undefined : value),
+    z.coerce.number().min(min).max(max).optional()
+  );
+
 export const accidentDataSchema = z.object({
   device_id: z.string().min(3).max(100),
   acceleration: z.coerce.number().min(0).max(100),
-  latitude: z.coerce.number().min(-90).max(90),
-  longitude: z.coerce.number().min(-180).max(180),
+  latitude: optionalCoordinate(-90, 90),
+  longitude: optionalCoordinate(-180, 180),
   tilt_angle: z.coerce.number().min(0).max(180).optional(),
   speed: z.coerce.number().min(0).max(300).optional(),
   severity: z.enum(["MINOR", "MEDIUM", "SEVERE"]),

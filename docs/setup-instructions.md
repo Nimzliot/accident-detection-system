@@ -54,7 +54,7 @@ Then set:
 5. Select `ESP32 Dev Module` in Arduino IDE and upload.
 6. Open Serial Monitor at `115200 baud`.
 7. Keep the MPU6050 steady during startup so initialization completes cleanly.
-8. Allow time for GPS lock. If GPS is not locked yet, the firmware continues running and the backend can still accept the accident event.
+8. Allow time for GPS lock. If GPS is not locked yet, the firmware still uploads accident events and the backend fills in a simulated map location.
 
 ## 4. Demo Flow
 

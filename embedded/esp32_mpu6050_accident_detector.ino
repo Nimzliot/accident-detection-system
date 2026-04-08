@@ -151,8 +151,10 @@ void sendAccident(float acceleration, float tiltAngle, float speedKmph, double l
   payload += "\"acceleration\":" + String(acceleration, 2) + ",";
   payload += "\"tilt_angle\":" + String(tiltAngle, 2) + ",";
   payload += "\"speed\":" + String(speedKmph, 2) + ",";
-  payload += "\"latitude\":" + String(latitude, 6) + ",";
-  payload += "\"longitude\":" + String(longitude, 6) + ",";
+  if (gps.location.isValid()) {
+    payload += "\"latitude\":" + String(latitude, 6) + ",";
+    payload += "\"longitude\":" + String(longitude, 6) + ",";
+  }
   payload += "\"severity\":\"" + String(severity) + "\"";
   payload += "}";
 
@@ -284,11 +286,10 @@ void loop() {
     if (strcmp(severity, "SEVERE") == 0) {
       beepBuzzer();
     }
-    if (gpsValid) {
-      sendAccident(acceleration, tiltAngle, speedKmph, latitude, longitude, severity);
-    } else {
-      Serial.println("GPS not locked, skipping accident upload to avoid invalid coordinates");
+    if (!gpsValid) {
+      Serial.println("GPS not locked, uploading accident without coordinates so backend can simulate location");
     }
+    sendAccident(acceleration, tiltAngle, speedKmph, latitude, longitude, severity);
     lastSentTime = millis();
   }
 
