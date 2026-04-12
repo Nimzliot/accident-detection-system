@@ -25,14 +25,14 @@ const int BUZZER_PIN = 25;
 const float GRAVITY_MS2 = 9.80665f;
 
 // Accident threshold
-const float MINOR_THRESHOLD = 12.0f;
-const float MEDIUM_THRESHOLD = 18.0f;
-const float SEVERE_THRESHOLD = 25.0f;
-const float MINOR_TILT = 12.0f;
-const float MEDIUM_TILT = 25.0f;
-const float SEVERE_TILT = 40.0f;
-const float MEDIUM_SPEED = 30.0f;
-const float SEVERE_SPEED = 60.0f;
+const float MINOR_THRESHOLD = 6.0f;
+const float MEDIUM_THRESHOLD = 10.0f;
+const float SEVERE_THRESHOLD = 14.0f;
+const float MINOR_TILT = 8.0f;
+const float MEDIUM_TILT = 16.0f;
+const float SEVERE_TILT = 26.0f;
+const float MEDIUM_SPEED = 18.0f;
+const float SEVERE_SPEED = 32.0f;
 const unsigned long SEND_DELAY_MS = 5000;
 const unsigned long HEARTBEAT_DELAY_MS = 15000;
 const unsigned long LOCATION_DELAY_MS = 5000;
@@ -148,6 +148,8 @@ void feedGpsFor(unsigned long durationMs) {
 }
 
 void connectWiFi() {
+  Serial.println("ESP32 booted");
+  Serial.println("WiFi module starting...");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi: ");
   Serial.println(WIFI_SSID);
@@ -158,6 +160,7 @@ void connectWiFi() {
   }
 
   Serial.println("\nWiFi connected");
+  Serial.println("ESP32 + WiFi started successfully");
   Serial.print("ESP32 IP: ");
   Serial.println(WiFi.localIP());
   Serial.print("Backend base URL: ");
@@ -165,11 +168,13 @@ void connectWiFi() {
 }
 
 void setupMPU6050() {
+  Serial.println("MPU6050 setup starting...");
   Wire.begin(SDA_PIN, SCL_PIN);
   mpu.initialize();
 
   if (mpu.testConnection()) {
     Serial.println("MPU6050 connected");
+    Serial.println("MPU6050 started successfully");
   } else {
     Serial.println("MPU6050 connection failed");
   }
@@ -192,11 +197,13 @@ void calibrateTiltBaseline() {
 }
 
 void setupGPS() {
+  Serial.println("GPS setup starting...");
   gpsSerial.begin(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
   Serial.println("GPS started");
 }
 
 void setupGSM() {
+  Serial.println("GSM setup starting...");
   gsmSerial.begin(9600, SERIAL_8N1, GSM_RX_PIN, GSM_TX_PIN);
   feedGpsFor(1000);
   Serial.println("SIM800L started");
@@ -229,8 +236,8 @@ MotionReading readMotion() {
 
 const char* classifySeverity(float acceleration, float tiltAngle, float speedKmph) {
   const float tiltDelta = normalizeTiltDelta(tiltAngle, baselineTiltAngle);
-  const bool hasMinorImpact = acceleration >= 4.0f;
-  const bool hasModerateImpact = acceleration >= 8.0f;
+  const bool hasMinorImpact = acceleration >= 2.0f;
+  const bool hasModerateImpact = acceleration >= 5.0f;
 
   if (acceleration >= SEVERE_THRESHOLD ||
       speedKmph >= SEVERE_SPEED ||
@@ -497,6 +504,7 @@ void setup() {
   Serial.begin(115200);
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
+  Serial.println("Smart Accident Detection System booting...");
 
   if (!validateRequiredConfig()) {
     while (true) {
@@ -511,6 +519,7 @@ void setup() {
   setupGSM();
   sendHeartbeat();
   lastHeartbeatTime = millis();
+  Serial.println("All startup modules initialized");
 }
 
 void loop() {
