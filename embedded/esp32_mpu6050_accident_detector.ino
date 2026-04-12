@@ -133,6 +133,10 @@ bool hasFreshGpsFix() {
     (!gps.satellites.isValid() || gps.satellites.value() >= 3);
 }
 
+bool shouldSend(unsigned long lastTime, unsigned long intervalMs) {
+  return millis() - lastTime > intervalMs;
+}
+
 void feedGpsFor(unsigned long durationMs) {
   const unsigned long start = millis();
   while (millis() - start < durationMs) {
@@ -287,31 +291,7 @@ bool sendGsmCommand(const String& command, const char* expected, int timeoutMs =
   return response.indexOf(expected) >= 0;
 }
 
-bool sendGsmCommandCapture(const String& command, String& response, int timeoutMs = GSM_COMMAND_TIMEOUT_MS) {
-  while (gsmSerial.available()) {
-    gsmSerial.read();
-  }
-
-  gsmSerial.println(command);
-  const unsigned long start = millis();
-  response = "";
-
-  while (millis() - start < (unsigned long) timeoutMs) {
-    while (gsmSerial.available()) {
-      char character = (char) gsmSerial.read();
-      response += character;
-      Serial.write(character);
-      if (response.indexOf("OK") >= 0 || response.indexOf("ERROR") >= 0) {
-        return true;
-      }
-    }
-    feedGpsFor(10);
-  }
-
-  return response.length() > 0;
-}
-
-bool waitForSmsPrompt(int timeoutMs = GSM_COMMAND_TIMEOUT_MS) {
+String readGsmResponse(int timeoutMs = GSM_COMMAND_TIMEOUT_MS) {
   const unsigned long start = millis();
   String response = "";
 
@@ -320,17 +300,11 @@ bool waitForSmsPrompt(int timeoutMs = GSM_COMMAND_TIMEOUT_MS) {
       char character = (char) gsmSerial.read();
       response += character;
       Serial.write(character);
-      if (character == '>') {
-        return true;
-      }
-      if (response.indexOf("ERROR") >= 0) {
-        return false;
-      }
     }
     feedGpsFor(10);
   }
 
-  return false;
+  return response;
 }
 
 bool isGsmReady() {
@@ -346,8 +320,11 @@ bool isGsmReady() {
 
   bool registered = false;
   for (int attempt = 1; attempt <= GSM_RETRY_ATTEMPTS; attempt++) {
-    String registrationResponse = "";
-    sendGsmCommandCapture("AT+CREG?", registrationResponse);
+    while (gsmSerial.available()) {
+      gsmSerial.read();
+    }
+    gsmSerial.println("AT+CREG?");
+    String registrationResponse = readGsmResponse();
     Serial.print("SIM800L registration attempt ");
     Serial.print(attempt);
     Serial.print(": ");
@@ -440,7 +417,8 @@ void sendSevereSmsAlert(float acceleration, float tiltAngle, float speedKmph, do
   gsmSerial.print("AT+CMGS=\"");
   gsmSerial.print(EMERGENCY_PHONE);
   gsmSerial.println("\"");
-  if (!waitForSmsPrompt()) {
+  String promptResponse = readGsmResponse();
+  if (promptResponse.indexOf('>') < 0 || promptResponse.indexOf("ERROR") >= 0) {
     Serial.println("SIM800L did not provide SMS prompt");
     flushGsmSerial();
     return;
@@ -574,17 +552,17 @@ void loop() {
   Serial.print(" | Lon: ");
   Serial.println(longitude, 6);
 
-  if (gpsValid && millis() - lastLocationTime > LOCATION_DELAY_MS) {
+  if (gpsValid && shouldSend(lastLocationTime, LOCATION_DELAY_MS)) {
     sendLocation(latitude, longitude);
     lastLocationTime = millis();
   }
 
-  if (millis() - lastHeartbeatTime > HEARTBEAT_DELAY_MS) {
+  if (shouldSend(lastHeartbeatTime, HEARTBEAT_DELAY_MS)) {
     sendHeartbeat();
     lastHeartbeatTime = millis();
   }
 
-  if (strcmp(severity, "NONE") != 0 && millis() - lastSentTime > SEND_DELAY_MS) {
+  if (strcmp(severity, "NONE") != 0 && shouldSend(lastSentTime, SEND_DELAY_MS)) {
     Serial.print(severity);
     Serial.println(" accident detected");
     if (strcmp(severity, "SEVERE") == 0) {
