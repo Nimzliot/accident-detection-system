@@ -56,6 +56,7 @@ unsigned long lastSentTime = 0;
 unsigned long lastHeartbeatTime = 0;
 unsigned long lastLocationTime = 0;
 float baselineTiltAngle = 0.0f;
+bool lastGpsStatus = false;
 
 bool containsPlaceholder(const char* value) {
   if (value == nullptr || value[0] == '\0') {
@@ -552,6 +553,15 @@ void loop() {
   float speedKmph = gps.speed.isValid() ? gps.speed.kmph() : 0.0f;
   const char* severity = classifySeverity(acceleration, tiltAngle, speedKmph);
   const bool gpsValid = hasFreshGpsFix();
+
+  if (gpsValid != lastGpsStatus) {
+    if (gpsValid) {
+      Serial.println("GPS STATUS: LOCKED");
+    } else {
+      Serial.println("GPS STATUS: SEARCHING");
+    }
+    lastGpsStatus = gpsValid;
+  }
 
   double latitude = 0.0;
   double longitude = 0.0;
