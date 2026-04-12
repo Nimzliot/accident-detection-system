@@ -5,8 +5,9 @@
 #include <TinyGPS++.h>
 
 // WiFi and backend settings
-// Replace these placeholders with the same WiFi name/password used by the laptop
-// running the backend. Use the laptop LAN IP, not localhost.
+// You MUST update these before flashing.
+// Use the same WiFi as the laptop running the backend.
+// Use the laptop LAN IP, not localhost.
 const char* WIFI_SSID = "YOUR_WIFI_NAME";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 const char* BACKEND_BASE_URL = "http://192.168.1.100:5000/api";
@@ -36,6 +37,11 @@ const unsigned long SEND_DELAY_MS = 5000;
 const unsigned long HEARTBEAT_DELAY_MS = 15000;
 const unsigned long LOCATION_DELAY_MS = 5000;
 const unsigned long GPS_STALE_MS = 15000;
+const int GSM_COMMAND_TIMEOUT_MS = 4000;
+const int GSM_RETRY_ATTEMPTS = 5;
+const unsigned long GSM_RETRY_DELAY_MS = 1200;
+const int HTTP_TIMEOUT_MS = 5000;
+const int HTTP_RETRY_ATTEMPTS = 3;
 
 MPU6050 mpu;
 TinyGPSPlus gps;
@@ -49,6 +55,47 @@ struct MotionReading;
 unsigned long lastSentTime = 0;
 unsigned long lastHeartbeatTime = 0;
 unsigned long lastLocationTime = 0;
+float baselineTiltAngle = 0.0f;
+
+bool containsPlaceholder(const char* value) {
+  if (value == nullptr || value[0] == '\0') {
+    return true;
+  }
+
+  String normalized = String(value);
+  normalized.toUpperCase();
+  return normalized.indexOf("YOUR") >= 0 || normalized.indexOf("192.168.1.100") >= 0;
+}
+
+bool validateRequiredConfig() {
+  bool valid = true;
+
+  if (containsPlaceholder(WIFI_SSID)) {
+    Serial.println("CONFIG ERROR: WIFI_SSID must be updated before flashing");
+    valid = false;
+  }
+
+  if (containsPlaceholder(WIFI_PASSWORD)) {
+    Serial.println("CONFIG ERROR: WIFI_PASSWORD must be updated before flashing");
+    valid = false;
+  }
+
+  if (containsPlaceholder(BACKEND_BASE_URL)) {
+    Serial.println("CONFIG ERROR: BACKEND_BASE_URL must be updated before flashing");
+    valid = false;
+  }
+
+  if (containsPlaceholder(EMERGENCY_PHONE)) {
+    Serial.println("CONFIG ERROR: EMERGENCY_PHONE must be updated before flashing");
+    valid = false;
+  }
+
+  if (!valid) {
+    Serial.println("Fix required config values and flash again.");
+  }
+
+  return valid;
+}
 
 String buildApiUrl(const char* path) {
   String url = String(BACKEND_BASE_URL);
@@ -71,6 +118,14 @@ struct MotionReading {
   float acceleration;
   float tiltAngle;
 };
+
+float normalizeTiltDelta(float currentTilt, float baselineTilt) {
+  float delta = fabs(currentTilt - baselineTilt);
+  if (delta > 180.0f) {
+    delta = 360.0f - delta;
+  }
+  return delta;
+}
 
 bool hasFreshGpsFix() {
   return gps.location.isValid() &&
@@ -116,6 +171,22 @@ void setupMPU6050() {
   }
 }
 
+void calibrateTiltBaseline() {
+  const int sampleCount = 30;
+  float totalTilt = 0.0f;
+
+  Serial.println("Calibrating MPU6050 baseline tilt. Keep device steady...");
+  for (int index = 0; index < sampleCount; index++) {
+    MotionReading reading = readMotion();
+    totalTilt += reading.tiltAngle;
+    delay(50);
+  }
+
+  baselineTiltAngle = totalTilt / sampleCount;
+  Serial.print("Baseline tilt angle: ");
+  Serial.println(baselineTiltAngle, 2);
+}
+
 void setupGPS() {
   gpsSerial.begin(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
   Serial.println("GPS started");
@@ -124,8 +195,6 @@ void setupGPS() {
 void setupGSM() {
   gsmSerial.begin(9600, SERIAL_8N1, GSM_RX_PIN, GSM_TX_PIN);
   feedGpsFor(1000);
-  gsmSerial.println("AT");
-  feedGpsFor(500);
   Serial.println("SIM800L started");
 }
 
@@ -155,15 +224,21 @@ MotionReading readMotion() {
 }
 
 const char* classifySeverity(float acceleration, float tiltAngle, float speedKmph) {
-  if (acceleration >= SEVERE_THRESHOLD || tiltAngle >= SEVERE_TILT || speedKmph >= SEVERE_SPEED) {
+  const float tiltDelta = normalizeTiltDelta(tiltAngle, baselineTiltAngle);
+
+  if (acceleration >= SEVERE_THRESHOLD ||
+      speedKmph >= SEVERE_SPEED ||
+      (tiltDelta >= SEVERE_TILT && acceleration >= MINOR_THRESHOLD)) {
     return "SEVERE";
   }
 
-  if (acceleration >= MEDIUM_THRESHOLD || tiltAngle >= MEDIUM_TILT || speedKmph >= MEDIUM_SPEED) {
+  if (acceleration >= MEDIUM_THRESHOLD ||
+      speedKmph >= MEDIUM_SPEED ||
+      (tiltDelta >= MEDIUM_TILT && acceleration >= (MINOR_THRESHOLD * 0.5f))) {
     return "MEDIUM";
   }
 
-  if (acceleration >= MINOR_THRESHOLD || tiltAngle >= MINOR_TILT) {
+  if (acceleration >= MINOR_THRESHOLD || tiltDelta >= MINOR_TILT) {
     return "MINOR";
   }
 
@@ -180,6 +255,156 @@ void flushGsmSerial() {
   while (gsmSerial.available()) {
     Serial.write(gsmSerial.read());
   }
+}
+
+bool sendGsmCommand(const String& command, const char* expected, int timeoutMs = GSM_COMMAND_TIMEOUT_MS) {
+  while (gsmSerial.available()) {
+    gsmSerial.read();
+  }
+
+  gsmSerial.println(command);
+  const unsigned long start = millis();
+  String response = "";
+
+  while (millis() - start < (unsigned long) timeoutMs) {
+    while (gsmSerial.available()) {
+      char character = (char) gsmSerial.read();
+      response += character;
+      Serial.write(character);
+      if (response.indexOf(expected) >= 0) {
+        return true;
+      }
+      if (response.indexOf("ERROR") >= 0) {
+        return false;
+      }
+    }
+    feedGpsFor(10);
+  }
+
+  return response.indexOf(expected) >= 0;
+}
+
+bool sendGsmCommandCapture(const String& command, String& response, int timeoutMs = GSM_COMMAND_TIMEOUT_MS) {
+  while (gsmSerial.available()) {
+    gsmSerial.read();
+  }
+
+  gsmSerial.println(command);
+  const unsigned long start = millis();
+  response = "";
+
+  while (millis() - start < (unsigned long) timeoutMs) {
+    while (gsmSerial.available()) {
+      char character = (char) gsmSerial.read();
+      response += character;
+      Serial.write(character);
+      if (response.indexOf("OK") >= 0 || response.indexOf("ERROR") >= 0) {
+        return true;
+      }
+    }
+    feedGpsFor(10);
+  }
+
+  return response.length() > 0;
+}
+
+bool waitForSmsPrompt(int timeoutMs = GSM_COMMAND_TIMEOUT_MS) {
+  const unsigned long start = millis();
+  String response = "";
+
+  while (millis() - start < (unsigned long) timeoutMs) {
+    while (gsmSerial.available()) {
+      char character = (char) gsmSerial.read();
+      response += character;
+      Serial.write(character);
+      if (character == '>') {
+        return true;
+      }
+      if (response.indexOf("ERROR") >= 0) {
+        return false;
+      }
+    }
+    feedGpsFor(10);
+  }
+
+  return false;
+}
+
+bool isGsmReady() {
+  if (!sendGsmCommand("AT", "OK")) {
+    Serial.println("SIM800L not responding to AT");
+    return false;
+  }
+
+  if (!sendGsmCommand("AT+CPIN?", "READY")) {
+    Serial.println("SIM800L SIM card not ready");
+    return false;
+  }
+
+  bool registered = false;
+  for (int attempt = 1; attempt <= GSM_RETRY_ATTEMPTS; attempt++) {
+    String registrationResponse = "";
+    sendGsmCommandCapture("AT+CREG?", registrationResponse);
+    Serial.print("SIM800L registration attempt ");
+    Serial.print(attempt);
+    Serial.print(": ");
+    Serial.println(registrationResponse);
+
+    if (registrationResponse.indexOf(",1") >= 0 || registrationResponse.indexOf(",5") >= 0) {
+      registered = true;
+      break;
+    }
+
+    feedGpsFor(GSM_RETRY_DELAY_MS);
+  }
+
+  if (!registered) {
+    Serial.println("SIM800L not registered on network");
+    return false;
+  }
+
+  if (!sendGsmCommand("AT+CMGF=1", "OK")) {
+    Serial.println("SIM800L could not enter SMS text mode");
+    return false;
+  }
+
+  return true;
+}
+
+int postJsonWithRetry(const String& url, const String& payload) {
+  int httpCode = -1;
+
+  for (int attempt = 1; attempt <= HTTP_RETRY_ATTEMPTS; attempt++) {
+    HTTPClient http;
+    http.setTimeout(HTTP_TIMEOUT_MS);
+    http.begin(url);
+    http.addHeader("Content-Type", "application/json");
+
+    Serial.print("HTTP POST Attempt ");
+    Serial.print(attempt);
+    Serial.print(" -> ");
+    Serial.println(url);
+    Serial.println(payload);
+
+    httpCode = http.POST(payload);
+    String responseBody = http.getString();
+
+    Serial.print("HTTP Response: ");
+    Serial.println(httpCode);
+    if (responseBody.length() > 0) {
+      Serial.println(responseBody);
+    }
+
+    http.end();
+
+    if (httpCode != -1) {
+      return httpCode;
+    }
+
+    feedGpsFor(300);
+  }
+
+  return httpCode;
 }
 
 void sendSevereSmsAlert(float acceleration, float tiltAngle, float speedKmph, double latitude, double longitude) {
@@ -204,19 +429,19 @@ void sendSevereSmsAlert(float acceleration, float tiltAngle, float speedKmph, do
     sms += ", GPS pending";
   }
 
-  gsmSerial.println("AT");
-  feedGpsFor(500);
-  flushGsmSerial();
-
-  gsmSerial.println("AT+CMGF=1");
-  feedGpsFor(500);
-  flushGsmSerial();
+  if (!isGsmReady()) {
+    Serial.println("Skipping SMS because SIM800L is not ready");
+    return;
+  }
 
   gsmSerial.print("AT+CMGS=\"");
   gsmSerial.print(EMERGENCY_PHONE);
   gsmSerial.println("\"");
-  feedGpsFor(500);
-  flushGsmSerial();
+  if (!waitForSmsPrompt()) {
+    Serial.println("SIM800L did not provide SMS prompt");
+    flushGsmSerial();
+    return;
+  }
 
   gsmSerial.print(sms);
   feedGpsFor(500);
@@ -234,10 +459,7 @@ void sendAccident(float acceleration, float tiltAngle, float speedKmph, double l
     return;
   }
 
-  HTTPClient http;
   String accidentUrl = buildApiUrl("accident-data");
-  http.begin(accidentUrl);
-  http.addHeader("Content-Type", "application/json");
 
   String payload = "{";
   payload += "\"device_id\":\"" + String(DEVICE_ID) + "\",";
@@ -251,16 +473,9 @@ void sendAccident(float acceleration, float tiltAngle, float speedKmph, double l
   payload += "\"severity\":\"" + String(severity) + "\"";
   payload += "}";
 
-  int httpCode = http.POST(payload);
-  String responseBody = http.getString();
   Serial.print("Accident POST -> ");
   Serial.println(accidentUrl);
-  Serial.print("Accident HTTP Response: ");
-  Serial.println(httpCode);
-  if (responseBody.length() > 0) {
-    Serial.println(responseBody);
-  }
-  http.end();
+  postJsonWithRetry(accidentUrl, payload);
 }
 
 void sendLocation(double latitude, double longitude) {
@@ -268,10 +483,7 @@ void sendLocation(double latitude, double longitude) {
     return;
   }
 
-  HTTPClient http;
   String locationUrl = buildApiUrl("device-location");
-  http.begin(locationUrl);
-  http.addHeader("Content-Type", "application/json");
 
   String payload = "{";
   payload += "\"device_id\":\"" + String(DEVICE_ID) + "\",";
@@ -279,16 +491,9 @@ void sendLocation(double latitude, double longitude) {
   payload += "\"longitude\":" + String(longitude, 6);
   payload += "}";
 
-  int httpCode = http.POST(payload);
-  String responseBody = http.getString();
   Serial.print("Location POST -> ");
   Serial.println(locationUrl);
-  Serial.print("Location HTTP Response: ");
-  Serial.println(httpCode);
-  if (responseBody.length() > 0) {
-    Serial.println(responseBody);
-  }
-  http.end();
+  postJsonWithRetry(locationUrl, payload);
 }
 
 void sendHeartbeat() {
@@ -296,25 +501,15 @@ void sendHeartbeat() {
     return;
   }
 
-  HTTPClient http;
   String heartbeatUrl = buildApiUrl("device-heartbeat");
-  http.begin(heartbeatUrl);
-  http.addHeader("Content-Type", "application/json");
 
   String payload = "{";
   payload += "\"device_id\":\"" + String(DEVICE_ID) + "\"";
   payload += "}";
 
-  int httpCode = http.POST(payload);
-  String responseBody = http.getString();
   Serial.print("Heartbeat POST -> ");
   Serial.println(heartbeatUrl);
-  Serial.print("Heartbeat HTTP Response: ");
-  Serial.println(httpCode);
-  if (responseBody.length() > 0) {
-    Serial.println(responseBody);
-  }
-  http.end();
+  postJsonWithRetry(heartbeatUrl, payload);
 }
 
 void setup() {
@@ -322,8 +517,15 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
 
+  if (!validateRequiredConfig()) {
+    while (true) {
+      delay(1000);
+    }
+  }
+
   connectWiFi();
   setupMPU6050();
+  calibrateTiltBaseline();
   setupGPS();
   setupGSM();
   sendHeartbeat();
@@ -340,6 +542,7 @@ void loop() {
   MotionReading motion = readMotion();
   float acceleration = motion.acceleration;
   float tiltAngle = motion.tiltAngle;
+  float tiltDelta = normalizeTiltDelta(tiltAngle, baselineTiltAngle);
   float speedKmph = gps.speed.isValid() ? gps.speed.kmph() : 0.0f;
   const char* severity = classifySeverity(acceleration, tiltAngle, speedKmph);
   const bool gpsValid = hasFreshGpsFix();
@@ -355,6 +558,8 @@ void loop() {
   Serial.print(acceleration);
   Serial.print(" m/s^2 | Tilt: ");
   Serial.print(tiltAngle);
+  Serial.print(" deg | TiltDelta: ");
+  Serial.print(tiltDelta);
   Serial.print(" deg | Speed: ");
   Serial.print(speedKmph);
   Serial.print(" km/h | Severity: ");

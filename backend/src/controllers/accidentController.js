@@ -12,6 +12,7 @@ import {
 
 export const postAccidentData = async (req, res, next) => {
   try {
+    console.log("Incoming accident:", req.body);
     const result = await createAccidentRecord(req.body);
     res.status(201).json({
       success: true,

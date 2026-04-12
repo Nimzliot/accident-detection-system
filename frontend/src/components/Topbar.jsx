@@ -8,6 +8,7 @@ const Topbar = () => {
   const locatedHardware = hardwareDevices.filter(
     (device) => device.latitude != null && device.longitude != null
   ).length;
+  const activeAlerts = alerts.filter((alert) => !alert.acknowledged).length;
 
   return (
     <header className="flex flex-col gap-5 rounded-[32px] border border-white/10 bg-[linear-gradient(135deg,rgba(36,18,24,0.96),rgba(66,28,23,0.88))] px-6 py-6 shadow-glow backdrop-blur xl:flex-row xl:items-end xl:justify-between">
@@ -53,7 +54,7 @@ const Topbar = () => {
         <div className="flex flex-wrap items-center gap-3 xl:col-span-2 xl:justify-end">
           <div className="inline-flex items-center gap-2 rounded-full bg-rose-500/10 px-4 py-2 text-sm text-rose-200 ring-1 ring-rose-500/20">
             <BellRing size={16} />
-            {alerts.length} active severe alerts
+            {activeAlerts} active severe alerts
           </div>
           <button
             type="button"

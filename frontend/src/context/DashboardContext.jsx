@@ -158,6 +158,7 @@ export const DashboardProvider = ({ children }) => {
         setAlerts((current) => [
           {
             ...alertResult.alert,
+            acknowledged: false,
             accident: enrichedAccident
           },
           ...current
@@ -168,7 +169,7 @@ export const DashboardProvider = ({ children }) => {
       setAlerts((current) =>
         current.map((item) =>
           item.accidentId === event.accidentId || item.accident_id === event.accidentId
-            ? { ...item, sent: false, acknowledgedBy: event.acknowledgedBy }
+            ? { ...item, sent: false, acknowledged: true, acknowledgedBy: event.acknowledgedBy }
             : item
         )
       );

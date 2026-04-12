@@ -22,6 +22,7 @@ const normalizeAlert = (alert) => ({
   accidentId: alert.accident_id,
   message: alert.message,
   sent: alert.sent,
+  acknowledged: !alert.sent,
   created_at: alert.created_at,
   accident: alert.accidents
     ? {

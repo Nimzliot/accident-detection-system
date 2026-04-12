@@ -28,7 +28,14 @@ export const createAccidentRecord = async (payload) => {
   const device = await accidentRepository.upsertDevice({
     device_id: normalized.deviceId,
     status: shouldTriggerEmergency ? "alert" : "online",
-    last_seen: normalized.timestamp
+    last_seen: normalized.timestamp,
+    ...(Number.isFinite(location.latitude) && Number.isFinite(location.longitude)
+      ? {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          location_updated_at: normalized.timestamp
+        }
+      : {})
   });
 
   const record = await accidentRepository.createAccident({
