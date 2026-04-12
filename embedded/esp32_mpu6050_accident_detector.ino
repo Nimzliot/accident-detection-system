@@ -225,6 +225,8 @@ MotionReading readMotion() {
 
 const char* classifySeverity(float acceleration, float tiltAngle, float speedKmph) {
   const float tiltDelta = normalizeTiltDelta(tiltAngle, baselineTiltAngle);
+  const bool hasMinorImpact = acceleration >= 4.0f;
+  const bool hasModerateImpact = acceleration >= 8.0f;
 
   if (acceleration >= SEVERE_THRESHOLD ||
       speedKmph >= SEVERE_SPEED ||
@@ -234,11 +236,12 @@ const char* classifySeverity(float acceleration, float tiltAngle, float speedKmp
 
   if (acceleration >= MEDIUM_THRESHOLD ||
       speedKmph >= MEDIUM_SPEED ||
-      (tiltDelta >= MEDIUM_TILT && acceleration >= (MINOR_THRESHOLD * 0.5f))) {
+      (tiltDelta >= MEDIUM_TILT && hasModerateImpact)) {
     return "MEDIUM";
   }
 
-  if (acceleration >= MINOR_THRESHOLD || tiltDelta >= MINOR_TILT) {
+  if (acceleration >= MINOR_THRESHOLD ||
+      (tiltDelta >= MINOR_TILT && hasMinorImpact)) {
     return "MINOR";
   }
 
