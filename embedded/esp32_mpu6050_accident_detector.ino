@@ -154,9 +154,16 @@ void connectWiFi() {
   Serial.print("Connecting to WiFi: ");
   Serial.println(WIFI_SSID);
 
+  int attempts = 0;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    attempts++;
+    if (attempts >= 40) {
+      Serial.println("\nWiFi connection failed");
+      Serial.println("Check WiFi name, password, router band, or signal strength");
+      return;
+    }
   }
 
   Serial.println("\nWiFi connected");
@@ -177,6 +184,7 @@ void setupMPU6050() {
     Serial.println("MPU6050 started successfully");
   } else {
     Serial.println("MPU6050 connection failed");
+    Serial.println("Check MPU6050 wiring and power");
   }
 }
 
@@ -200,6 +208,7 @@ void setupGPS() {
   Serial.println("GPS setup starting...");
   gpsSerial.begin(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
   Serial.println("GPS started");
+  Serial.println("If satellite count stays 0, check GPS wiring and move outdoors");
 }
 
 void setupGSM() {
@@ -207,6 +216,7 @@ void setupGSM() {
   gsmSerial.begin(9600, SERIAL_8N1, GSM_RX_PIN, GSM_TX_PIN);
   feedGpsFor(1000);
   Serial.println("SIM800L started");
+  Serial.println("If GSM fails later, check SIM, signal, and external power supply");
 }
 
 void readGPS() {
@@ -388,9 +398,12 @@ int postJsonWithRetry(const String& url, const String& payload) {
       return httpCode;
     }
 
+    Serial.println("HTTP failed with -1, retrying...");
     feedGpsFor(300);
   }
 
+  Serial.println("HTTP request failed after all retries");
+  Serial.println("Check backend IP, backend server, same WiFi network, and firewall");
   return httpCode;
 }
 
@@ -418,6 +431,7 @@ void sendSevereSmsAlert(float acceleration, float tiltAngle, float speedKmph, do
 
   if (!isGsmReady()) {
     Serial.println("Skipping SMS because SIM800L is not ready");
+    Serial.println("GSM failure: module/SIM/network not ready");
     return;
   }
 
@@ -427,6 +441,7 @@ void sendSevereSmsAlert(float acceleration, float tiltAngle, float speedKmph, do
   String promptResponse = readGsmResponse();
   if (promptResponse.indexOf('>') < 0 || promptResponse.indexOf("ERROR") >= 0) {
     Serial.println("SIM800L did not provide SMS prompt");
+    Serial.println("GSM failure: SMS prompt not received");
     flushGsmSerial();
     return;
   }
@@ -438,6 +453,7 @@ void sendSevereSmsAlert(float acceleration, float tiltAngle, float speedKmph, do
 
   Serial.print("SIM800L SMS -> ");
   Serial.println(EMERGENCY_PHONE);
+  Serial.println("GSM SMS flow completed");
   flushGsmSerial();
 }
 
