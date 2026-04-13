@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <Wire.h>
 #include <MPU6050.h>
@@ -6,13 +7,21 @@
 
 // WiFi and backend settings
 // You MUST update these before flashing.
-// Use the same WiFi as the laptop running the backend.
-// Use the laptop LAN IP, not localhost.
-const char* WIFI_SSID = "YOUR_WIFI_NAME";
+// For local testing use the laptop LAN IP, not localhost.
+// For online deployment use your public backend URL, for example:
+// https://your-backend-domain/api
+const char* WIFI_SSID = "";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 const char* BACKEND_BASE_URL = "http://192.168.1.100:5000/api";
 const char* DEVICE_ID = "vehicle_01";
-const char* EMERGENCY_PHONE = "+911234567890";
+const int EMERGENCY_CONTACT_COUNT = 5;
+const char* EMERGENCY_CONTACTS[EMERGENCY_CONTACT_COUNT] = {
+  "+911234567890",
+  "+911234567891",
+  "+911234567892",
+  "+911234567893",
+  "+911234567894"
+};
 
 // Pin connections
 const int SDA_PIN = 21;
@@ -40,6 +49,7 @@ const unsigned long GPS_STALE_MS = 15000;
 const int GSM_COMMAND_TIMEOUT_MS = 4000;
 const int GSM_RETRY_ATTEMPTS = 5;
 const unsigned long GSM_RETRY_DELAY_MS = 1200;
+const unsigned long GSM_CALL_DURATION_MS = 15000;
 const int HTTP_TIMEOUT_MS = 5000;
 const int HTTP_RETRY_ATTEMPTS = 3;
 
@@ -68,6 +78,15 @@ bool containsPlaceholder(const char* value) {
   return normalized.indexOf("YOUR") >= 0 || normalized.indexOf("192.168.1.100") >= 0;
 }
 
+bool containsPlaceholderPhone(const char* value) {
+  if (containsPlaceholder(value)) {
+    return true;
+  }
+
+  String normalized = String(value);
+  return normalized.indexOf("1234567890") >= 0;
+}
+
 bool validateRequiredConfig() {
   bool valid = true;
 
@@ -86,9 +105,13 @@ bool validateRequiredConfig() {
     valid = false;
   }
 
-  if (containsPlaceholder(EMERGENCY_PHONE)) {
-    Serial.println("CONFIG ERROR: EMERGENCY_PHONE must be updated before flashing");
-    valid = false;
+  for (int index = 0; index < EMERGENCY_CONTACT_COUNT; index++) {
+    if (containsPlaceholderPhone(EMERGENCY_CONTACTS[index])) {
+      Serial.print("CONFIG ERROR: EMERGENCY_CONTACTS[");
+      Serial.print(index);
+      Serial.println("] must be updated before flashing");
+      valid = false;
+    }
   }
 
   if (!valid) {
@@ -282,6 +305,10 @@ void flushGsmSerial() {
   }
 }
 
+const char* getPrimaryEmergencyContact() {
+  return EMERGENCY_CONTACTS[0];
+}
+
 bool sendGsmCommand(const String& command, const char* expected, int timeoutMs = GSM_COMMAND_TIMEOUT_MS) {
   while (gsmSerial.available()) {
     gsmSerial.read();
@@ -374,8 +401,14 @@ int postJsonWithRetry(const String& url, const String& payload) {
 
   for (int attempt = 1; attempt <= HTTP_RETRY_ATTEMPTS; attempt++) {
     HTTPClient http;
+    WiFiClientSecure secureClient;
     http.setTimeout(HTTP_TIMEOUT_MS);
-    http.begin(url);
+    if (url.startsWith("https://")) {
+      secureClient.setInsecure();
+      http.begin(secureClient, url);
+    } else {
+      http.begin(url);
+    }
     http.addHeader("Content-Type", "application/json");
 
     Serial.print("HTTP POST Attempt ");
@@ -408,6 +441,52 @@ int postJsonWithRetry(const String& url, const String& payload) {
   return httpCode;
 }
 
+bool sendSmsToNumber(const char* phoneNumber, const String& sms) {
+  gsmSerial.print("AT+CMGS=\"");
+  gsmSerial.print(phoneNumber);
+  gsmSerial.println("\"");
+
+  String promptResponse = readGsmResponse();
+  if (promptResponse.indexOf('>') < 0 || promptResponse.indexOf("ERROR") >= 0) {
+    Serial.print("SIM800L did not provide SMS prompt for ");
+    Serial.println(phoneNumber);
+    Serial.println("GSM failure: SMS prompt not received");
+    flushGsmSerial();
+    return false;
+  }
+
+  gsmSerial.print(sms);
+  feedGpsFor(500);
+  gsmSerial.write(26);
+  feedGpsFor(5000);
+
+  Serial.print("SIM800L SMS -> ");
+  Serial.println(phoneNumber);
+  return true;
+}
+
+bool dialEmergencyCall(const char* phoneNumber) {
+  Serial.print("SIM800L CALL -> ");
+  Serial.println(phoneNumber);
+  gsmSerial.print("ATD");
+  gsmSerial.print(phoneNumber);
+  gsmSerial.println(";");
+
+  String callResponse = readGsmResponse();
+  if (callResponse.indexOf("OK") < 0 && callResponse.indexOf("CONNECT") < 0) {
+    Serial.println("SIM800L failed to start emergency call");
+    Serial.println("GSM failure: call command not accepted");
+    flushGsmSerial();
+    return false;
+  }
+
+  Serial.println("Emergency call ringing...");
+  feedGpsFor(GSM_CALL_DURATION_MS);
+  sendGsmCommand("ATH", "OK", 3000);
+  Serial.println("Emergency call finished");
+  return true;
+}
+
 void sendSevereSmsAlert(float acceleration, float tiltAngle, float speedKmph, double latitude, double longitude) {
   String sms = "Severe accident detected for ";
   sms += DEVICE_ID;
@@ -436,25 +515,18 @@ void sendSevereSmsAlert(float acceleration, float tiltAngle, float speedKmph, do
     return;
   }
 
-  gsmSerial.print("AT+CMGS=\"");
-  gsmSerial.print(EMERGENCY_PHONE);
-  gsmSerial.println("\"");
-  String promptResponse = readGsmResponse();
-  if (promptResponse.indexOf('>') < 0 || promptResponse.indexOf("ERROR") >= 0) {
-    Serial.println("SIM800L did not provide SMS prompt");
-    Serial.println("GSM failure: SMS prompt not received");
-    flushGsmSerial();
-    return;
+  dialEmergencyCall(getPrimaryEmergencyContact());
+
+  bool smsSent = false;
+  for (int index = 0; index < EMERGENCY_CONTACT_COUNT; index++) {
+    smsSent = sendSmsToNumber(EMERGENCY_CONTACTS[index], sms) || smsSent;
   }
 
-  gsmSerial.print(sms);
-  feedGpsFor(500);
-  gsmSerial.write(26);
-  feedGpsFor(5000);
-
-  Serial.print("SIM800L SMS -> ");
-  Serial.println(EMERGENCY_PHONE);
-  Serial.println("GSM SMS flow completed");
+  if (smsSent) {
+    Serial.println("GSM SMS flow completed");
+  } else {
+    Serial.println("GSM failure: SMS could not be delivered to any configured contact");
+  }
   flushGsmSerial();
 }
 
