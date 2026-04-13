@@ -49,7 +49,7 @@ const unsigned long GPS_STALE_MS = 15000;
 const int GSM_COMMAND_TIMEOUT_MS = 4000;
 const int GSM_RETRY_ATTEMPTS = 5;
 const unsigned long GSM_RETRY_DELAY_MS = 1200;
-const unsigned long GSM_CALL_DURATION_MS = 15000;
+const unsigned long GSM_CALL_DURATION_MS = 5000;
 const int HTTP_TIMEOUT_MS = 5000;
 const int HTTP_RETRY_ATTEMPTS = 3;
 
@@ -515,8 +515,6 @@ void sendSevereSmsAlert(float acceleration, float tiltAngle, float speedKmph, do
     return;
   }
 
-  dialEmergencyCall(getPrimaryEmergencyContact());
-
   bool smsSent = false;
   for (int index = 0; index < EMERGENCY_CONTACT_COUNT; index++) {
     smsSent = sendSmsToNumber(EMERGENCY_CONTACTS[index], sms) || smsSent;
@@ -527,6 +525,12 @@ void sendSevereSmsAlert(float acceleration, float tiltAngle, float speedKmph, do
   } else {
     Serial.println("GSM failure: SMS could not be delivered to any configured contact");
   }
+
+  for (int index = 0; index < EMERGENCY_CONTACT_COUNT; index++) {
+    dialEmergencyCall(EMERGENCY_CONTACTS[index]);
+  }
+
+  Serial.println("GSM CALL flow completed");
   flushGsmSerial();
 }
 
