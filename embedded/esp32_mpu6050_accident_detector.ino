@@ -13,6 +13,9 @@
 const char* WIFI_SSID = "";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 const char* BACKEND_BASE_URL = "http://192.168.1.100:5000/api";
+const char* DEPLOY_LINK = "https://your-deploy-link.vercel.app"; // Update with your frontend deploy link
+const double DEFAULT_LATITUDE = 12.650616;
+const double DEFAULT_LONGITUDE = 78.604561;
 const char* DEVICE_ID = "vehicle_01";
 const int EMERGENCY_CONTACT_COUNT = 5;
 const char* EMERGENCY_CONTACTS[EMERGENCY_CONTACT_COUNT] = {
@@ -102,6 +105,11 @@ bool validateRequiredConfig() {
 
   if (containsPlaceholder(BACKEND_BASE_URL)) {
     Serial.println("CONFIG ERROR: BACKEND_BASE_URL must be updated before flashing");
+    valid = false;
+  }
+
+  if (containsPlaceholder(DEPLOY_LINK)) {
+    Serial.println("CONFIG ERROR: DEPLOY_LINK must be updated before flashing");
     valid = false;
   }
 
@@ -468,6 +476,8 @@ bool sendSmsToNumber(const char* phoneNumber, const String& sms) {
 bool dialEmergencyCall(const char* phoneNumber) {
   Serial.print("SIM800L CALL -> ");
   Serial.println(phoneNumber);
+  flushGsmSerial();
+  feedGpsFor(500);
   gsmSerial.print("ATD");
   gsmSerial.print(phoneNumber);
   gsmSerial.println(";");
@@ -484,6 +494,7 @@ bool dialEmergencyCall(const char* phoneNumber) {
   feedGpsFor(GSM_CALL_DURATION_MS);
   sendGsmCommand("ATH", "OK", 3000);
   Serial.println("Emergency call finished");
+  feedGpsFor(3000);
   return true;
 }
 
@@ -506,8 +517,11 @@ void sendSevereSmsAlert(float acceleration, float tiltAngle, float speedKmph, do
     sms += ", Map: ";
     sms += buildGoogleMapsLink(latitude, longitude);
   } else {
-    sms += ", GPS pending";
+    sms += ", Default GPS Map: ";
+    sms += buildGoogleMapsLink(DEFAULT_LATITUDE, DEFAULT_LONGITUDE);
   }
+  sms += " Deploy Link: ";
+  sms += DEPLOY_LINK;
 
   if (!isGsmReady()) {
     Serial.println("Skipping SMS because SIM800L is not ready");
@@ -550,6 +564,9 @@ void sendAccident(float acceleration, float tiltAngle, float speedKmph, double l
   if (hasFreshGpsFix()) {
     payload += "\"latitude\":" + String(latitude, 6) + ",";
     payload += "\"longitude\":" + String(longitude, 6) + ",";
+  } else {
+    payload += "\"latitude\":" + String(DEFAULT_LATITUDE, 6) + ",";
+    payload += "\"longitude\":" + String(DEFAULT_LONGITUDE, 6) + ",";
   }
   payload += "\"severity\":\"" + String(severity) + "\"";
   payload += "}";
@@ -681,7 +698,7 @@ void loop() {
       sendSevereSmsAlert(acceleration, tiltAngle, speedKmph, latitude, longitude);
     }
     if (!gpsValid) {
-      Serial.println("GPS not locked, uploading accident without coordinates so backend can simulate location");
+      Serial.println("GPS not locked, using default coordinates for accident reporting");
     }
     sendAccident(acceleration, tiltAngle, speedKmph, latitude, longitude, severity);
     lastSentTime = millis();
