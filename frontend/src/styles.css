@@ -21,6 +21,73 @@ body {
   box-sizing: border-box;
 }
 
+.metric-card-glow {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+  animation: metricGlowPulse 2.4s ease-in-out infinite;
+}
+
+.metric-card-glow::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: -1;
+  border-radius: 32px;
+  opacity: 0.3;
+  filter: blur(34px);
+}
+
+.metric-card-glow-minor {
+  border-color: rgba(52, 211, 153, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.16),
+    0 0 24px rgba(52, 211, 153, 0.2),
+    0 24px 80px rgba(14, 9, 11, 0.48);
+}
+
+.metric-card-glow-minor::after {
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.38) 0%, rgba(52, 211, 153, 0) 72%);
+}
+
+.metric-card-glow-medium {
+  border-color: rgba(252, 211, 77, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(252, 211, 77, 0.16),
+    0 0 24px rgba(252, 211, 77, 0.2),
+    0 24px 80px rgba(14, 9, 11, 0.48);
+}
+
+.metric-card-glow-medium::after {
+  background: radial-gradient(circle, rgba(252, 211, 77, 0.38) 0%, rgba(252, 211, 77, 0) 72%);
+}
+
+.metric-card-glow-severe {
+  border-color: rgba(251, 113, 133, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(251, 113, 133, 0.16),
+    0 0 26px rgba(251, 113, 133, 0.22),
+    0 24px 80px rgba(14, 9, 11, 0.48);
+}
+
+.metric-card-glow-severe::after {
+  background: radial-gradient(circle, rgba(251, 113, 133, 0.38) 0%, rgba(251, 113, 133, 0) 72%);
+}
+
+@keyframes metricGlowPulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+  }
+}
+
 .leaflet-container {
   height: 100%;
   width: 100%;

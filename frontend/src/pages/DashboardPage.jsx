@@ -49,18 +49,21 @@ const DashboardPage = () => {
           label="Minor"
           value={summary.minor}
           accent="bg-emerald-400"
+          glowClass="metric-card-glow metric-card-glow-minor"
           helper="Low-priority impacts suitable for monitoring."
         />
         <MetricCard
           label="Medium"
           value={summary.medium}
           accent="bg-amber-300"
+          glowClass="metric-card-glow metric-card-glow-medium"
           helper="Moderate-risk events needing operator review."
         />
         <MetricCard
           label="Severe"
           value={summary.severe}
           accent="bg-rose-400"
+          glowClass="metric-card-glow metric-card-glow-severe"
           helper="Critical incidents escalated to emergency response."
         />
       </div>

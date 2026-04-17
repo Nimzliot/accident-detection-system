@@ -10,20 +10,20 @@
 // For local testing use the laptop LAN IP, not localhost.
 // For online deployment use your public backend URL, for example:
 // https://your-backend-domain/api
-const char* WIFI_SSID = "";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
-const char* BACKEND_BASE_URL = "http://192.168.1.100:5000/api";
-const char* DEPLOY_LINK = "https://your-deploy-link.vercel.app"; // Update with your frontend deploy link
+const char* WIFI_SSID = "ad";
+const char* WIFI_PASSWORD = "ad123456";
+const char* BACKEND_BASE_URL = "https://accident-detection-system-nawh.onrender.com/api";
+const char* DEPLOY_LINK = "https://smart-accident.netlify.app/"; // Update with your frontend deploy link
 const double DEFAULT_LATITUDE = 12.650616;
 const double DEFAULT_LONGITUDE = 78.604561;
 const char* DEVICE_ID = "vehicle_01";
 const int EMERGENCY_CONTACT_COUNT = 5;
 const char* EMERGENCY_CONTACTS[EMERGENCY_CONTACT_COUNT] = {
-  "+911234567890",
-  "+911234567891",
-  "+911234567892",
-  "+911234567893",
-  "+911234567894"
+  "+919342128180",
+  "+919585483291",
+  "+918098994486",
+  "+919952672377",
+  "+918838205098"
 };
 
 // Pin connections
