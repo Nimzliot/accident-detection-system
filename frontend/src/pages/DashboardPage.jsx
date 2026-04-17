@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import AlertBanner from "../components/AlertBanner";
 import Accident3DViewer from "../components/Accident3DViewer";
 import ChartsPanel from "../components/ChartsPanel";
@@ -10,6 +11,39 @@ import { useDashboard } from "../context/DashboardContext";
 
 const DashboardPage = () => {
   const { summary, devices, accidents, latestAccident, hardwareStatus } = useDashboard();
+  const previousSummaryRef = useRef(summary);
+  const [flashState, setFlashState] = useState({
+    minor: false,
+    medium: false,
+    severe: false
+  });
+
+  useEffect(() => {
+    const previousSummary = previousSummaryRef.current;
+    const timeouts = [];
+    const nextFlashState = {};
+
+    ["minor", "medium", "severe"].forEach((key) => {
+      if ((summary[key] ?? 0) > (previousSummary[key] ?? 0)) {
+        nextFlashState[key] = true;
+        timeouts.push(
+          window.setTimeout(() => {
+            setFlashState((current) => ({ ...current, [key]: false }));
+          }, 1400)
+        );
+      }
+    });
+
+    if (Object.keys(nextFlashState).length > 0) {
+      setFlashState((current) => ({ ...current, ...nextFlashState }));
+    }
+
+    previousSummaryRef.current = summary;
+
+    return () => {
+      timeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    };
+  }, [summary]);
 
   return (
     <div className="space-y-6">
@@ -49,21 +83,27 @@ const DashboardPage = () => {
           label="Minor"
           value={summary.minor}
           accent="bg-emerald-400"
-          glowClass="metric-card-glow metric-card-glow-minor"
+          glowClass={`metric-card-glow metric-card-glow-minor ${
+            flashState.minor ? "metric-card-flash metric-card-flash-minor" : ""
+          }`}
           helper="Low-priority impacts suitable for monitoring."
         />
         <MetricCard
           label="Medium"
           value={summary.medium}
           accent="bg-amber-300"
-          glowClass="metric-card-glow metric-card-glow-medium"
+          glowClass={`metric-card-glow metric-card-glow-medium ${
+            flashState.medium ? "metric-card-flash metric-card-flash-medium" : ""
+          }`}
           helper="Moderate-risk events needing operator review."
         />
         <MetricCard
           label="Severe"
           value={summary.severe}
           accent="bg-rose-400"
-          glowClass="metric-card-glow metric-card-glow-severe"
+          glowClass={`metric-card-glow metric-card-glow-severe ${
+            flashState.severe ? "metric-card-flash metric-card-flash-severe" : ""
+          }`}
           helper="Critical incidents escalated to emergency response."
         />
       </div>
