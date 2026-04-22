@@ -19,9 +19,11 @@ export const env = {
   supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE ?? "",
   simulatedLatitude: Number(process.env.SIMULATED_LATITUDE ?? 12.9716),
   simulatedLongitude: Number(process.env.SIMULATED_LONGITUDE ?? 77.5946),
-  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ?? "",
-  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ?? "",
-  twilioFromNumber: process.env.TWILIO_FROM_NUMBER ?? "",
+  fast2SmsApiKey: process.env.FAST2SMS_API_KEY ?? "",
+  alertPhones: (process.env.ALERT_PHONES ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
   emergencyContacts: (process.env.EMERGENCY_CONTACTS ?? "")
     .split(",")
     .map((value) => value.trim())
