@@ -5,15 +5,17 @@ import { accidentRepository } from "./accidentRepository.js";
 const buildGoogleMapsLink = (latitude, longitude) =>
   `https://maps.google.com/?q=${Number(latitude).toFixed(6)},${Number(longitude).toFixed(6)}`;
 
+const normalizeFast2SmsNumber = (value) => String(value).replace(/\D/g, "");
+
 async function sendSmsAlert(data) {
   try {
-    const apiKey = process.env.FAST2SMS_API_KEY ?? "";
-    const alertPhones = (process.env.ALERT_PHONES ?? "")
-      .split(",")
-      .map((value) => value.trim())
+    const apiKey = env.fast2SmsApiKey;
+    const alertPhones = env.alertPhones
+      .map(normalizeFast2SmsNumber)
       .filter(Boolean);
 
     if (!apiKey || alertPhones.length === 0) {
+      console.error("Fast2SMS alert skipped: missing API key or alert phone numbers");
       return false;
     }
 
@@ -28,7 +30,7 @@ async function sendSmsAlert(data) {
       `Map: ${buildGoogleMapsLink(latitude, longitude)}\n` +
       `Deploy Link: ${env.frontendUrl}`;
 
-    await axios.get("https://www.fast2sms.com/dev/bulkV2", {
+    const response = await axios.get("https://www.fast2sms.com/dev/bulkV2", {
       params: {
         authorization: apiKey,
         message,
@@ -38,9 +40,21 @@ async function sendSmsAlert(data) {
       }
     });
 
+    const responseData = response.data ?? {};
+    const isSuccess =
+      response.status >= 200 &&
+      response.status < 300 &&
+      responseData.return !== false &&
+      responseData.message !== "Invalid Authentication, Check your Authorisation Key";
+
+    if (!isSuccess) {
+      console.error("Fast2SMS alert rejected:", responseData);
+      return false;
+    }
+
     return true;
   } catch (error) {
-    console.error("Fast2SMS alert failed:", error);
+    console.error("Fast2SMS alert failed:", error.response?.data ?? error.message);
     return false;
   }
 }
@@ -68,9 +82,8 @@ export const triggerEmergencyAlerts = async (accident) => {
 
   return {
     alert,
-    recipients: (process.env.ALERT_PHONES ?? "")
-      .split(",")
-      .map((value) => value.trim())
+    recipients: env.alertPhones
+      .map(normalizeFast2SmsNumber)
       .filter(Boolean),
     deliveries: [
       {
